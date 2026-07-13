@@ -1,0 +1,6 @@
+{
+  "workspacejson": {
+    "command": "npx",
+    "args": ["-y", "@workspacejson/codex-mcp"]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "@workspacejson/codex-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that surfaces workspace.json fragility and co-change intelligence to OpenAI Codex before it edits code.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "workspacejson-codex-mcp": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/node": "^22.0.0"
+  }
+}

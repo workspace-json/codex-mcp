@@ -1,0 +1,19 @@
+{
+  "name": "workspace-json",
+  "version": "0.1.0",
+  "description": "Portable codebase intelligence and behavioral risk checks for coding agents. Fragility and co-change history from workspace.json, enforced via deterministic pre-edit hooks with mechanically derived evidence tiers.",
+  "license": "Apache-2.0",
+  "repository": "https://github.com/workspace-json/codex-plugin",
+  "homepage": "https://workspacejson.dev",
+  "keywords": ["codebase-intelligence", "agent-memory", "risk", "workspace-json"],
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json",
+  "interface": {
+    "displayName": "workspace.json",
+    "shortDescription": "Give Codex durable knowledge of codebase fragility and change patterns.",
+    "developerName": "workspace.json",
+    "category": "Developer Tools",
+    "capabilities": ["Read", "Review"],
+    "websiteURL": "https://workspacejson.dev"
+  }
+}
