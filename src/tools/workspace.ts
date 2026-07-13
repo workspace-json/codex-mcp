@@ -123,8 +123,18 @@ export function boundStructured(output: Record<string, unknown>): Record<string,
     const nested = arrays.filter((r) => r.depth >= 2 && r.node.length >= 1);
     const topLone = arrays.filter((r) => r.depth === 1 && r.node.length === 1);
 
-    const heaviest = <T extends { node: unknown[] }>(xs: T[]): T =>
-      xs.sort((a, b) => serializedWeight(b.node) - serializedWeight(a.node))[0];
+    const heaviest = <T extends { node: unknown[] }>(xs: T[]): T => {
+      let best = xs[0];
+      let bestWeight = serializedWeight(best.node);
+      for (let i = 1; i < xs.length; i++) {
+        const w = serializedWeight(xs[i].node);
+        if (w > bestWeight) {
+          best = xs[i];
+          bestWeight = w;
+        }
+      }
+      return best;
+    };
 
     if (topMulti.length > 0) {
       heaviest(topMulti).node.pop();
