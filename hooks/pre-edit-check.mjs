@@ -22,18 +22,14 @@
  */
 
 import { createRequire } from "node:module";
-import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = (p) => resolve(here, "..", "dist", p);
 
-const { loadWorkspace, findFragile, findCoChangePartners } = await import(
-  dist("services/workspace.js")
-);
-const { deriveTier, decideEnforcement, aggregateAction } = await import(
-  dist("evidence.js")
-);
+const { loadWorkspace, findFragile, findCoChangePartners } = await import(dist("services/workspace.js"));
+const { deriveTier, decideEnforcement, aggregateAction } = await import(dist("evidence.js"));
 
 // ---------------------------------------------------------------------------
 // Patch parsing: extract touched paths from an apply_patch envelope or a
@@ -66,26 +62,26 @@ function emitDecision(action, messages) {
   const reason = messages.join(" | ");
   if (action === "deny") {
     process.stdout.write(
-      JSON.stringify({
+      `${JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
           permissionDecision: "deny",
           permissionDecisionReason: reason,
         },
-      }) + "\n",
+      })}\n`,
     );
     // Belt and suspenders: documented alternate block channel.
-    process.stderr.write(reason + "\n");
+    process.stderr.write(`${reason}\n`);
     process.exit(2);
   }
   if (action === "warn" || action === "annotate") {
     process.stdout.write(
-      JSON.stringify({
+      `${JSON.stringify({
         hookSpecificOutput: {
           hookEventName: "PreToolUse",
           additionalContext: reason,
         },
-      }) + "\n",
+      })}\n`,
     );
     process.exit(0);
   }
@@ -109,7 +105,10 @@ async function main() {
   if (argv[0] === "--paths") {
     paths = argv.slice(1);
   } else if (argv[0] === "--paths-stdin") {
-    paths = (await readStdin()).split("\n").map((s) => s.trim()).filter(Boolean);
+    paths = (await readStdin())
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
   } else {
     // Hook mode: Codex sends the event JSON on stdin.
     const raw = await readStdin();
@@ -119,11 +118,7 @@ async function main() {
     } catch {
       process.exit(0); // unparseable event: stay out of the way, never fabricate
     }
-    const patch =
-      event?.tool_input?.command ??
-      event?.tool_input?.patch ??
-      event?.tool_input?.input ??
-      "";
+    const patch = event?.tool_input?.command ?? event?.tool_input?.patch ?? event?.tool_input?.input ?? "";
     paths = extractTouchedPaths(patch);
   }
 
@@ -155,9 +150,7 @@ async function main() {
   });
 
   const action = aggregateAction(assessments);
-  const messages = assessments
-    .filter((a) => a.action !== "none")
-    .map((a) => a.message);
+  const messages = assessments.filter((a) => a.action !== "none").map((a) => a.message);
   emitDecision(action, messages);
 }
 

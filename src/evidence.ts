@@ -119,10 +119,7 @@ export function verifyRecord(record: EvidenceRecord, cwd: string): boolean {
 // of evidence shape (+ optional live verification results).
 // ---------------------------------------------------------------------------
 
-export function deriveTier(
-  evidence: EvidenceRecord[],
-  opts?: { verify?: boolean; cwd?: string },
-): EvidenceTier {
+export function deriveTier(evidence: EvidenceRecord[], opts?: { verify?: boolean; cwd?: string }): EvidenceTier {
   if (evidence.length === 0) return "ASSERTED";
   if (opts?.verify && opts.cwd) {
     for (const rec of evidence) {
@@ -154,48 +151,32 @@ export function decideEnforcement(input: {
 }): FileRiskAssessment {
   // Same matcher as the read layer: exact-first, absolute-suffix fallback only.
   // (audit Critical #1 — this was a divergent fuzzy match that downgraded denies)
-  const inChangeset = (partner: string) =>
-    input.changesetPaths.some((c) => pathsMatch(c, partner));
+  const inChangeset = (partner: string) => input.changesetPaths.some((c) => pathsMatch(c, partner));
   const missingPartners = input.coChangePartners.filter((p) => !inChangeset(p));
 
-  const cite =
-    input.evidence.length > 0
-      ? ` Evidence: ${input.evidence.map((e) => e.claim).join("; ")}.`
-      : "";
+  const cite = input.evidence.length > 0 ? ` Evidence: ${input.evidence.map((e) => e.claim).join("; ")}.` : "";
 
   let action: EnforcementAction;
   let message: string;
 
-  const evidencedFragile =
-    input.fragile && (input.tier === "OBSERVED" || input.tier === "VERIFIED");
+  const evidencedFragile = input.fragile && (input.tier === "OBSERVED" || input.tier === "VERIFIED");
 
   if (evidencedFragile && missingPartners.length > 0) {
     action = "deny";
-    message =
-      `BLOCK [tier ${input.tier}]: ${input.path} is fragile` +
-      (input.reason ? ` (${input.reason})` : "") +
-      ` and historically co-changes with ${missingPartners.join(", ")}, which this change omits.${cite}` +
-      ` Include the co-change partners or get explicit human approval to proceed without them.`;
+    message = `BLOCK [tier ${input.tier}]: ${input.path} is fragile${input.reason ? ` (${input.reason})` : ""} and historically co-changes with ${missingPartners.join(", ")}, which this change omits.${cite} Include the co-change partners or get explicit human approval to proceed without them.`;
   } else if (evidencedFragile) {
     action = "warn";
-    message =
-      `CAUTION [tier ${input.tier}]: ${input.path} is fragile` +
-      (input.reason ? ` (${input.reason})` : "") +
-      `.${cite} Prefer minimal, well-tested changes.` +
-      (input.coChangePartners.length > 0
+    message = `CAUTION [tier ${input.tier}]: ${input.path} is fragile${input.reason ? ` (${input.reason})` : ""}.${cite} Prefer minimal, well-tested changes.${
+      input.coChangePartners.length > 0
         ? ` Co-change partners present in changeset: ${input.coChangePartners.join(", ")}.`
-        : "");
+        : ""
+    }`;
   } else if (missingPartners.length > 0) {
     action = "warn";
-    message =
-      `ADVISORY: ${input.path} historically co-changes with ${missingPartners.join(", ")}, ` +
-      `which this change omits. Check whether related updates are needed.`;
+    message = `ADVISORY: ${input.path} historically co-changes with ${missingPartners.join(", ")}, which this change omits. Check whether related updates are needed.`;
   } else if (input.fragile && input.tier === "ASSERTED") {
     action = "annotate";
-    message =
-      `NOTE [tier ASSERTED]: ${input.path} is flagged fragile without recorded evidence` +
-      (input.reason ? ` (${input.reason})` : "") +
-      `. Treat as a prior, not a finding.`;
+    message = `NOTE [tier ASSERTED]: ${input.path} is flagged fragile without recorded evidence${input.reason ? ` (${input.reason})` : ""}. Treat as a prior, not a finding.`;
   } else {
     action = "none";
     message = `No recorded risk history for ${input.path}. Absence of history is not evidence of safety.`;

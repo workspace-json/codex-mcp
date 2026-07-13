@@ -25,7 +25,7 @@ Add the MCP server to Codex (`~/.codex/config.toml` global or `.codex/config.tom
 ```toml
 [mcp_servers.workspacejson]
 command = "npx"
-args = ["-y", "@workspacejson/codex-mcp"]
+args = ["-y", "@workspacejson/codex-mcp", "server"]
 # Optional: point at a specific file or search root.
 # env = { WORKSPACE_JSON_PATH = "/abs/path/.agents/workspace.json" }
 ```
@@ -39,12 +39,19 @@ path to check fragility and co-change partners.
 
 ### Option 2: Full Codex plugin — MCP + deterministic hook
 
-For deterministic enforcement, install the plugin manifest and its `PreToolUse` hook. The npm package includes the plugin manifest under `.codex-plugin/plugin.json` and the hook under `hooks/hooks.json`.
-
-Point Codex's plugin loader at the manifest inside the installed package, or copy the plugin directory into your Codex plugins path:
+For deterministic enforcement, run the installer from the repo root:
 
 ```bash
-# Example: copy bundled plugin assets into a Codex plugin directory
+npx -y @workspacejson/codex-mcp install --with-hook
+# or, if you have the repo cloned:
+node scripts/install.mjs --with-hook
+```
+
+This writes the MCP server block and a `PreToolUse` hook stanza into `.codex/config.toml` at the current repo root. Re-run the command at any time; it is idempotent and never duplicates the block.
+
+You can also copy the bundled plugin assets manually into a Codex plugin directory:
+
+```bash
 cp -r node_modules/@workspacejson/codex-mcp/.codex-plugin ~/.codex/plugins/workspace-json
 cp -r node_modules/@workspacejson/codex-mcp/hooks ~/.codex/plugins/workspace-json/
 cp node_modules/@workspacejson/codex-mcp/.mcp.json ~/.codex/plugins/workspace-json/

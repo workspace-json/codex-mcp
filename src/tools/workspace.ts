@@ -1,13 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { CHARACTER_LIMIT } from "../constants.js";
-import {
-  loadWorkspace,
-  findFragile,
-  findCoChangePartners,
-  isIndexed,
-} from "../services/workspace.js";
-import { deriveTier, decideEnforcement, aggregateAction } from "../evidence.js";
+import { aggregateAction, decideEnforcement, deriveTier } from "../evidence.js";
+import { findCoChangePartners, findFragile, isIndexed, loadWorkspace } from "../services/workspace.js";
 import { WorkspaceNotFoundError } from "../types.js";
 
 type ToolResult = {
@@ -245,10 +240,7 @@ Returns JSON:
         };
         const text = sliced.length
           ? sliced
-              .map(
-                (f) =>
-                  `${f.score !== undefined ? `[${f.score}] ` : ""}${f.path}${f.reason ? ` — ${f.reason}` : ""}`,
-              )
+              .map((f) => `${f.score !== undefined ? `[${f.score}] ` : ""}${f.path}${f.reason ? ` — ${f.reason}` : ""}`)
               .join("\n")
           : "No fragile files recorded in this workspace.";
         return {
@@ -281,11 +273,7 @@ Returns JSON:
   }`,
       inputSchema: z
         .object({
-          paths: z
-            .array(z.string().min(1))
-            .min(1)
-            .max(200)
-            .describe("File paths in the proposed changeset."),
+          paths: z.array(z.string().min(1)).min(1).max(200).describe("File paths in the proposed changeset."),
         })
         .strict().shape,
       annotations: {
@@ -320,8 +308,7 @@ Returns JSON:
         const interesting = assessments.filter((a) => a.action !== "none");
         const text =
           interesting.length > 0
-            ? `Changeset action: ${action.toUpperCase()}\n` +
-              interesting.map((a) => `- ${a.message}`).join("\n")
+            ? `Changeset action: ${action.toUpperCase()}\n${interesting.map((a) => `- ${a.message}`).join("\n")}`
             : "Changeset action: NONE. No recorded risk history for any touched file. Absence of history is not evidence of safety.";
         return {
           content: [{ type: "text", text: truncate(text) }],

@@ -23,23 +23,31 @@
     "agent-hooks"
   ],
   "bin": {
-    "workspacejson-codex-mcp": "dist/index.js"
+    "workspacejson-codex-mcp": "scripts/install.mjs"
   },
   "main": "dist/index.js",
-  "files": [
-    "dist",
-    "hooks",
-    ".codex-plugin",
-    ".mcp.json",
-    "README.md",
-    "LICENSE"
-  ],
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "hooks", "scripts/install.mjs", ".codex-plugin", ".mcp.json", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
-    "test": "npm run build && npm run smoke",
-    "smoke": "node scripts/smoke.mjs"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "node scripts/smoke.mjs",
+    "pack:check": "npm pack --dry-run && npx publint",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run smoke",
+    "prepublishOnly": "npm run check && npm run pack:check"
   },
   "engines": {
     "node": ">=20"
@@ -49,7 +57,10 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.0.0",
+    "publint": "^0.3.21",
     "typescript": "^5.9.0",
-    "@types/node": "^22.0.0"
+    "vitest": "^3.2.7"
   }
 }

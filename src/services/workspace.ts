@@ -1,18 +1,14 @@
-import { readFile, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { isAbsolute, resolve, dirname } from "node:path";
-import {
-  WORKSPACE_JSON_CANDIDATES,
-  ENV_WORKSPACE_PATH,
-  ENV_WORKSPACE_ROOT,
-} from "../constants.js";
+import { readFile, stat } from "node:fs/promises";
+import { dirname, isAbsolute, resolve } from "node:path";
+import { ENV_WORKSPACE_PATH, ENV_WORKSPACE_ROOT, WORKSPACE_JSON_CANDIDATES } from "../constants.js";
 import { normalizeEvidence } from "../evidence.js";
 import { normalizeKey, pathsMatch } from "../path-match.js";
 import {
-  type NormalizedWorkspace,
-  type FragileFile,
   type CoChangeGroup,
+  type FragileFile,
   type FrameworkManifest,
+  type NormalizedWorkspace,
   WorkspaceNotFoundError,
 } from "../types.js";
 
@@ -57,9 +53,7 @@ export function resolveWorkspacePath(): string {
 // ---------------------------------------------------------------------------
 
 function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 function normalizeFragileFiles(raw: unknown): FragileFile[] {
@@ -71,10 +65,7 @@ function normalizeFragileFiles(raw: unknown): FragileFile[] {
       continue;
     }
     const rec = asRecord(entry);
-    const path =
-      (typeof rec.path === "string" && rec.path) ||
-      (typeof rec.file === "string" && rec.file) ||
-      "";
+    const path = (typeof rec.path === "string" && rec.path) || (typeof rec.file === "string" && rec.file) || "";
     if (!path) continue;
     const file: FragileFile = { path: normalizeKey(path), evidence: normalizeEvidence(rec.evidence) };
     if (typeof rec.reason === "string") file.reason = rec.reason;
@@ -92,9 +83,7 @@ function normalizeCoChange(raw: unknown): CoChangeGroup[] {
     const out: CoChangeGroup[] = [];
     for (const entry of raw) {
       if (Array.isArray(entry)) {
-        const files = entry
-          .filter((f): f is string => typeof f === "string")
-          .map(normalizeKey);
+        const files = entry.filter((f): f is string => typeof f === "string").map(normalizeKey);
         if (files.length >= 2) out.push({ files });
         continue;
       }
@@ -126,11 +115,7 @@ function normalizeFileIndex(raw: unknown): string[] {
   if (Array.isArray(raw)) {
     return raw
       .map((e) =>
-        typeof e === "string"
-          ? e
-          : typeof asRecord(e).path === "string"
-            ? (asRecord(e).path as string)
-            : "",
+        typeof e === "string" ? e : typeof asRecord(e).path === "string" ? (asRecord(e).path as string) : "",
       )
       .filter((p) => p.length > 0)
       .map(normalizeKey);
@@ -153,9 +138,7 @@ export function normalizeWorkspace(sourcePath: string, parsed: unknown): Normali
 
   const frameworkRaw = generated.frameworkManifest;
   const frameworkManifest =
-    frameworkRaw && typeof frameworkRaw === "object"
-      ? (frameworkRaw as FrameworkManifest)
-      : undefined;
+    frameworkRaw && typeof frameworkRaw === "object" ? (frameworkRaw as FrameworkManifest) : undefined;
 
   // STABLE SURFACE ONLY (per live-state audit): the four externally consumed
   // paths. health.*, sidecar files, generated.fragility, and generated.coChange
@@ -188,9 +171,7 @@ export async function loadWorkspace(): Promise<NormalizedWorkspace> {
   try {
     parsed = JSON.parse(text);
   } catch (err) {
-    throw new Error(
-      `Failed to parse workspace.json at ${path}: ${err instanceof Error ? err.message : String(err)}`,
-    );
+    throw new Error(`Failed to parse workspace.json at ${path}: ${err instanceof Error ? err.message : String(err)}`);
   }
   const data = normalizeWorkspace(path, parsed);
   cache = { path, mtimeMs: info.mtimeMs, data };
