@@ -1,4 +1,6 @@
-# @workspacejson/codex-mcp
+# workspace.json for Codex
+
+`@workspacejson/codex-mcp`
 
 An MCP server that gives OpenAI Codex the one thing it structurally cannot derive from the current source tree: **behavioral history**. It reads a local [`workspace.json`](https://workspacejson.dev) and exposes, as Codex tools, which files are **fragile** (historically error-prone / high blast radius) and which files **co-change** (tend to be edited together).
 
