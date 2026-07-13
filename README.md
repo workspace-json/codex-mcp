@@ -4,11 +4,23 @@ An MCP server that gives OpenAI Codex the one thing it structurally cannot deriv
 
 Codex reads the same tree you do. What it can't see is that `src/db/client.ts` has been reverted three times, or that touching the checkout route almost always means touching the session module too. That history lives in `workspace.json`. This server hands it to Codex, and via the MCP `instructions` field, tells Codex to consult it *before* editing a file rather than only when asked.
 
-Everything runs locally over stdio. No network, no code leaving the machine.
+At runtime, the server operates locally over stdio and does not upload repository contents. Initial package installation may contact npm.
+
+## See it in 30 seconds
+
+**Task:** Update the checkout route.
+
+Without `workspace.json`: Codex proposes one file.
+
+With `workspace.json`: the hook identifies two evidenced partners and blocks the incomplete patch.
+
+Result: Codex revises the changeset before the edit lands.
 
 ## Install & wire into Codex
 
-Codex reads MCP server config from `~/.codex/config.toml` (global) or `.codex/config.toml` (project-scoped, trusted projects only). Add:
+### Option 1: MCP context only
+
+Add the MCP server to Codex (`~/.codex/config.toml` global or `.codex/config.toml` project-scoped):
 
 ```toml
 [mcp_servers.workspacejson]
@@ -18,19 +30,34 @@ args = ["-y", "@workspacejson/codex-mcp"]
 # env = { WORKSPACE_JSON_PATH = "/abs/path/.agents/workspace.json" }
 ```
 
-Restart Codex, then run `/mcp` in the TUI to confirm the server is connected. To make Codex reach for it automatically, the server already ships standing guidance in its MCP `instructions`; you can reinforce it in `AGENTS.md`:
+Restart Codex, then run `/mcp` in the TUI to confirm the server is connected. The server ships standing guidance in its MCP `instructions`; you can reinforce it in `AGENTS.md`:
 
 ```md
 Before editing or creating a file, call workspace_get_file_context on the target
 path to check fragility and co-change partners.
 ```
 
+### Option 2: Full Codex plugin — MCP + deterministic hook
+
+For deterministic enforcement, install the plugin manifest and its `PreToolUse` hook. The npm package includes the plugin manifest under `.codex-plugin/plugin.json` and the hook under `hooks/hooks.json`.
+
+Point Codex's plugin loader at the manifest inside the installed package, or copy the plugin directory into your Codex plugins path:
+
+```bash
+# Example: copy bundled plugin assets into a Codex plugin directory
+cp -r node_modules/@workspacejson/codex-mcp/.codex-plugin ~/.codex/plugins/workspace-json
+cp -r node_modules/@workspacejson/codex-mcp/hooks ~/.codex/plugins/workspace-json/
+cp node_modules/@workspacejson/codex-mcp/.mcp.json ~/.codex/plugins/workspace-json/
+```
+
+The exact Codex plugin path depends on your Codex version and platform; the plugin manifest (`plugin.json`) references `./hooks/hooks.json` and `./.mcp.json` relative to the plugin root. The hook in `hooks/pre-edit-check.mjs` is the same file used for repo-native fallback and CI.
+
 ## Evidence tiers (the part that is different)
 
 Every fragility signal carries a tier, derived **mechanically** by this package from the evidence attached to it. Producers (humans, tools, agents) record evidence; they never record a tier or a confidence value, and any such field in the artifact is ignored and re-derived:
 
 | Tier | Meaning | Derivation |
-|---|---|---|
+| --- | --- | --- |
 | `ASSERTED` | Claimed, no evidence recorded | zero evidence records |
 | `OBSERVED` | Something was seen and written down | at least one evidence record (`{claim, command?, output?}` or bare observation) |
 | `VERIFIED` | A green we watched | at least one evidence triple whose read-only command was re-run locally and reproduced its recorded output (`--verify` mode; whitelisted `git log/show/diff/grep/rev-parse/status` only) |
@@ -46,13 +73,13 @@ git diff --name-only | node hooks/pre-edit-check.mjs --paths-stdin
 node hooks/pre-edit-check.mjs --paths src/routes/checkout.ts
 ```
 
-The hook fails open on missing/unparseable input (no workspace.json means no opinion, never a fabricated block) and never crashes the edit loop.
+The hook fails open on missing/unparseable input (no workspace.json means no opinion, never a fabricated block) and never crashes the edit loop. A block is triggered by an **evidenced partner omission**: a co-change relationship recorded in `workspace.json` is absent from the proposed patch. It does not mean the partner is universally required for every semantic change.
 
 ## Tools
 
 All are read-only and operate on the local `workspace.json`.
 
-- **`workspace_get_file_context(path)`** — the primary call. Returns fragility (with reason/score/evidence when present) and co-change partners for one file. Call it before editing. Returns `fragile:false` with an empty partner list when a file has no recorded history: that is a real answer, not an error.
+- **`workspace_get_file_context(path)`** — the primary call. Returns fragility (with reason/score/evidence when present) and co-change partners for one file. Call it before editing. Returns `fragile:false` with an empty partner list when a file has no recorded history: that means **no recorded risk**, not **verified safe**. The system never issues a safety approval; it only reports whether the evidence it holds supports a concern.
 - **`workspace_get_cochange_partners(path)`** — the files that historically change with this one. Call it after an edit to catch related updates.
 - **`workspace_list_fragile_files(limit?)`** — all fragile files, most fragile first. Orientation at the start of a task.
 - **`workspace_assess_change(paths[])`** — evaluate a whole changeset; returns the mechanical `deny`/`warn`/`annotate`/`none` decision with per-file assessments. The MCP twin of the hook.
@@ -62,7 +89,7 @@ All are read-only and operate on the local `workspace.json`.
 This server reads a tolerant superset of the [workspace.json standard](https://workspacejson.dev). The fields consumed:
 
 | Field | Used for |
-|---|---|
+| --- | --- |
 | `manual.fragileFiles` | fragility signal (accepts `string[]` or `{ path, reason, score, evidence }[]`) |
 | `manual.coChangePatterns` | co-change groups (accepts `{ files: [] }[]`, `string[][]`, or adjacency map) |
 | `generated.fileIndex` | whether a queried path is indexed |
@@ -89,6 +116,15 @@ The smoke test (`scripts/smoke.mjs`) exercises the protocol end to end: initiali
 VERIFIED (smoke suite drives the built server over stdio and the hook via stdin, 24 checks): protocol handshake and instructions, all four tools, tier derivation for ASSERTED/OBSERVED, the deny/warn/none enforcement matrix, evidence citation in deny reasons, META-102 exact-first path matching with absolute-path fallback and fuzzy-match rejection, root-marker upward walk from a nested cwd, hook exit codes and JSON emission, fail-open on garbage input.
 
 VERIFIED on real Codex 0.144.1 (2026-07-13): the installed plugin manifest loaded its `PreToolUse` hook; `hookSpecificOutput.permissionDecision: "deny"` plus exit code 2 blocked `apply_patch` under `WJSON_DENY_ALL=1`; unsetting it allowed a normal edit; the fixture denied a checkout-only edit with the recorded `revert d4e5f6` evidence and missing partners; and a single patch covering checkout, session, and format surfaced cautionary context and proceeded. The output contract and manifest remain isolated to single adapter points (`emitDecision()` in the hook; `.codex-plugin/plugin.json`).
+
+## Current limitations
+
+- Enforcement currently covers Codex `apply_patch`.
+- Other edit mechanisms may receive context without deterministic blocking.
+- Missing or malformed `workspace.json` fails open.
+- Stale evidence is not treated as proof of current risk.
+- `fragile:false` means the file has no recorded fragility, not that it is verified safe.
+- This does not replace tests, review, or repository instructions.
 
 ## License
 
