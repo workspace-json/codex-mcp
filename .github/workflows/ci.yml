@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run smoke tests
+        run: npm run smoke
+
+      - name: Verify package contents
+        run: npm pack --dry-run
+
+      - name: Ensure package contains plugin assets
+        run: |
+          npm pack --dry-run 2>&1 | tee pack.log
+          grep -E '(\.mcp\.json|\.codex-plugin/|hooks/)' pack.log
