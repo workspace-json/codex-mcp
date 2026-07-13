@@ -9,6 +9,7 @@ import {
   type FragileFile,
   type FrameworkManifest,
   type NormalizedWorkspace,
+  WorkspaceInvalidError,
   WorkspaceNotFoundError,
 } from "../types.js";
 
@@ -171,11 +172,41 @@ export async function loadWorkspace(): Promise<NormalizedWorkspace> {
   try {
     parsed = JSON.parse(text);
   } catch (err) {
-    throw new Error(`Failed to parse workspace.json at ${path}: ${err instanceof Error ? err.message : String(err)}`);
+    throw new WorkspaceInvalidError(path, `unparseable JSON (${err instanceof Error ? err.message : String(err)})`);
+  }
+  // A present-but-wrong-shaped root ([], null, string, number) is corrupt
+  // evidence, not an empty workspace. `{}` is a valid, usable empty workspace.
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new WorkspaceInvalidError(
+      path,
+      `root is ${parsed === null ? "null" : Array.isArray(parsed) ? "an array" : typeof parsed}, expected an object`,
+    );
   }
   const data = normalizeWorkspace(path, parsed);
   cache = { path, mtimeMs: info.mtimeMs, data };
   return data;
+}
+
+/**
+ * Discriminated load result for callers (e.g. the pre-edit hook) that must treat
+ * "no file" and "corrupt file" differently. "missing" is a defensible silent
+ * no-opinion; "invalid" must be surfaced as unknown/unavailable, never as a
+ * silent allow. Never throws.
+ */
+export type WorkspaceOutcome =
+  | { status: "ok"; workspace: NormalizedWorkspace }
+  | { status: "missing"; detail: string }
+  | { status: "invalid"; detail: string };
+
+export async function loadWorkspaceOutcome(): Promise<WorkspaceOutcome> {
+  try {
+    return { status: "ok", workspace: await loadWorkspace() };
+  } catch (err) {
+    if (err instanceof WorkspaceNotFoundError) {
+      return { status: "missing", detail: err.message };
+    }
+    return { status: "invalid", detail: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export function findFragile(ws: NormalizedWorkspace, path: string): FragileFile | undefined {

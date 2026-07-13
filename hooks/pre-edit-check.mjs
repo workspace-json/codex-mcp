@@ -28,7 +28,7 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = (p) => resolve(here, "..", "dist", p);
 
-const { loadWorkspace, findFragile, findCoChangePartners } = await import(dist("services/workspace.js"));
+const { loadWorkspaceOutcome, findFragile, findCoChangePartners } = await import(dist("services/workspace.js"));
 const { deriveTier, decideEnforcement, aggregateAction } = await import(dist("evidence.js"));
 
 // ---------------------------------------------------------------------------
@@ -128,12 +128,19 @@ async function main() {
 
   if (paths.length === 0) process.exit(0);
 
-  let ws;
-  try {
-    ws = await loadWorkspace();
-  } catch {
-    process.exit(0); // no workspace.json: no intelligence, no opinion, no block
+  const outcome = await loadWorkspaceOutcome();
+  if (outcome.status === "missing") {
+    process.exit(0); // no evidence file at all: silent no-opinion, never an approval
   }
+  if (outcome.status === "invalid") {
+    // Evidence file IS present but corrupt/unreadable. Fail open (never block the
+    // edit loop on our own parse failure) but say so explicitly — a silent allow
+    // here would let a truncated/garbage workspace.json invisibly disable the gate.
+    emitDecision("warn", [
+      `workspace intelligence UNAVAILABLE — evidence present but unusable: ${outcome.detail}. Co-change enforcement is OFF for this edit; treat risk as UNKNOWN.`,
+    ]);
+  }
+  const ws = outcome.workspace;
 
   const assessments = paths.map((p) => {
     const fragile = findFragile(ws, p);

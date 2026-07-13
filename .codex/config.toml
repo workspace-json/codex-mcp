@@ -1,5 +1,7 @@
 # Project-scoped Codex MCP config. Codex loads this for trusted projects.
 [mcp_servers.workspacejson]
 command = "npx"
-args = ["-y", "@workspacejson/codex-mcp"]
+# "server" is required: the package bin doubles as installer (no/other args) and
+# MCP server ("server"). Without it, Codex launches the installer, not the server.
+args = ["-y", "@workspacejson/codex-mcp", "server"]
 # env = { WORKSPACE_JSON_PATH = "/abs/path/.agents/workspace.json" }

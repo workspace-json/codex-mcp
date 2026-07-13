@@ -39,6 +39,129 @@ function truncate(text: string): string {
   return `${text.slice(0, CHARACTER_LIMIT)}\n\n[truncated: response exceeded ${CHARACTER_LIMIT} characters. Narrow your query.]`;
 }
 
+// Longest text kept when a bulky string field is elided; strings shorter than
+// STRING_MIN_TRUNCATE are left alone (not worth the marker overhead).
+const STRING_KEEP = 60;
+const STRING_MIN_TRUNCATE = STRING_KEEP + 20;
+
+type Reducible =
+  | { kind: "array"; depth: number; node: unknown[] }
+  | { kind: "string"; parent: Record<string, unknown> | unknown[]; key: string | number; value: string };
+
+function collectReducibles(
+  node: unknown,
+  depth: number,
+  parent: unknown,
+  key: string | number | null,
+  out: Reducible[],
+): void {
+  if (Array.isArray(node)) {
+    if (node.length > 0) out.push({ kind: "array", depth, node });
+    node.forEach((child, i) => collectReducibles(child, depth + 1, node, i, out));
+  } else if (node && typeof node === "object") {
+    for (const k of Object.keys(node as Record<string, unknown>)) {
+      collectReducibles((node as Record<string, unknown>)[k], depth + 1, node, k, out);
+    }
+  } else if (typeof node === "string" && node.length >= STRING_MIN_TRUNCATE && parent !== null && key !== null) {
+    out.push({ kind: "string", parent: parent as Record<string, unknown> | unknown[], key, value: node });
+  }
+}
+
+function serializedWeight(node: unknown): number {
+  return JSON.stringify(node)?.length ?? 0;
+}
+
+/**
+ * Guarantee JSON.stringify(result) <= CHARACTER_LIMIT on the STRUCTURED channel —
+ * MCP clients consume structuredContent programmatically, so bounding only
+ * content[].text leaves it unbounded. Reduces in information-preserving order:
+ * (1) drop tail records from the largest top-level list, (2) truncate the longest
+ * text field, (3) trim the largest nested list, then as a last resort (4) drop a
+ * lone top-level record. Scalar signals (path, fragile, tier, action, workspaceVersion)
+ * are never removed, so a bounded payload still carries its verdict. `truncated`
+ * is set ONLY when data was actually removed, and the loop runs until the flagged
+ * result truly fits — it never claims a boundedness it does not have. A payload
+ * that already fits is returned untouched, with no flag.
+ */
+export function boundStructured(output: Record<string, unknown>): Record<string, unknown> {
+  if (JSON.stringify(output).length <= CHARACTER_LIMIT) return output;
+
+  const result = JSON.parse(JSON.stringify(output)) as Record<string, unknown>;
+
+  // Keep `count` honest as we trim: find the top-level array whose length is count.
+  let countedKey: string | null = null;
+  if (typeof result.count === "number") {
+    for (const [k, v] of Object.entries(result)) {
+      if (Array.isArray(v) && v.length === result.count) {
+        countedKey = k;
+        break;
+      }
+    }
+  }
+
+  let droppedRecords = 0;
+  let elidedChars = 0;
+  const withFlags = (): Record<string, unknown> => {
+    const flagged: Record<string, unknown> = {
+      ...result,
+      truncated: true,
+      omitted: droppedRecords,
+      note: `structured payload reduced to fit the ${CHARACTER_LIMIT}-char cap (${droppedRecords} record(s) dropped, ${elidedChars} char(s) of text elided). Narrow your query.`,
+    };
+    if (countedKey && Array.isArray(result[countedKey])) flagged.count = (result[countedKey] as unknown[]).length;
+    return flagged;
+  };
+
+  let guard = 0;
+  while (JSON.stringify(withFlags()).length > CHARACTER_LIMIT && guard++ < 200_000) {
+    const reducibles: Reducible[] = [];
+    collectReducibles(result, 0, null, null, reducibles);
+    const arrays = reducibles.filter((r): r is Extract<Reducible, { kind: "array" }> => r.kind === "array");
+    const strings = reducibles.filter((r): r is Extract<Reducible, { kind: "string" }> => r.kind === "string");
+
+    const topMulti = arrays.filter((r) => r.depth === 1 && r.node.length >= 2);
+    const nested = arrays.filter((r) => r.depth >= 2 && r.node.length >= 1);
+    const topLone = arrays.filter((r) => r.depth === 1 && r.node.length === 1);
+
+    const heaviest = <T extends { node: unknown[] }>(xs: T[]): T =>
+      xs.sort((a, b) => serializedWeight(b.node) - serializedWeight(a.node))[0];
+
+    if (topMulti.length > 0) {
+      heaviest(topMulti).node.pop();
+      droppedRecords++;
+    } else if (strings.length > 0) {
+      const s = strings.sort((a, b) => b.value.length - a.value.length)[0];
+      (s.parent as Record<string, unknown>)[s.key as string] =
+        `${s.value.slice(0, STRING_KEEP)}…[+${s.value.length - STRING_KEEP} chars]`;
+      elidedChars += s.value.length - STRING_KEEP;
+    } else if (nested.length > 0) {
+      heaviest(nested).node.pop();
+      droppedRecords++;
+    } else if (topLone.length > 0) {
+      heaviest(topLone).node.pop();
+      droppedRecords++;
+    } else {
+      break; // only scalars left; already minimal
+    }
+  }
+
+  return withFlags();
+}
+
+const SEVERITY_RANK: Record<string, number> = { deny: 3, warn: 2, annotate: 1, none: 0 };
+
+/**
+ * Order assessments by enforcement severity (deny first) so that when the
+ * structured payload is trimmed from the tail, the blocking `deny` detail — the
+ * assessment carrying the actionable "why" — is the last thing dropped, not the
+ * first.
+ */
+export function orderAssessmentsBySeverity<T extends { action?: string }>(assessments: T[]): T[] {
+  return [...assessments].sort(
+    (a, b) => (SEVERITY_RANK[b.action ?? "none"] ?? 0) - (SEVERITY_RANK[a.action ?? "none"] ?? 0),
+  );
+}
+
 const PathInput = z
   .object({
     path: z
@@ -140,7 +263,7 @@ Returns fragile:false with empty partners when the file has no recorded history 
 
         return {
           content: [{ type: "text", text: truncate(lines.join("\n")) }],
-          structuredContent: output,
+          structuredContent: boundStructured(output),
         };
       }),
   );
@@ -182,7 +305,7 @@ Returns an empty partners array when none are recorded (a real answer, not an er
               ),
             },
           ],
-          structuredContent: output,
+          structuredContent: boundStructured(output),
         };
       }),
   );
@@ -245,7 +368,7 @@ Returns JSON:
           : "No fragile files recorded in this workspace.";
         return {
           content: [{ type: "text", text: truncate(text) }],
-          structuredContent: output,
+          structuredContent: boundStructured(output),
         };
       }),
   );
@@ -302,7 +425,8 @@ Returns JSON:
         const action = aggregateAction(assessments);
         const output = {
           action,
-          assessments,
+          // Severity-ordered so bounding trims low-severity noise before the deny detail.
+          assessments: orderAssessmentsBySeverity(assessments),
           workspaceVersion: ws.version ?? null,
         };
         const interesting = assessments.filter((a) => a.action !== "none");
@@ -312,7 +436,7 @@ Returns JSON:
             : "Changeset action: NONE. No recorded risk history for any touched file. Absence of history is not evidence of safety.";
         return {
           content: [{ type: "text", text: truncate(text) }],
-          structuredContent: output,
+          structuredContent: boundStructured(output),
         };
       }),
   );

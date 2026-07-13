@@ -55,3 +55,17 @@ export class WorkspaceNotFoundError extends Error {
     this.name = "WorkspaceNotFoundError";
   }
 }
+
+/**
+ * Raised when a workspace.json file IS present but cannot be trusted as
+ * evidence: unparseable JSON, or a structurally-wrong root (array/primitive/null
+ * rather than an object). Distinct from WorkspaceNotFoundError so callers can
+ * stay silent on "no file" but surface an explicit unknown/unavailable signal on
+ * "file present but corrupt" instead of silently proceeding as if unopinionated.
+ */
+export class WorkspaceInvalidError extends Error {
+  constructor(sourcePath: string, detail: string) {
+    super(`workspace.json at ${sourcePath} is present but unusable: ${detail}`);
+    this.name = "WorkspaceInvalidError";
+  }
+}
