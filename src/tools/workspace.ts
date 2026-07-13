@@ -141,11 +141,29 @@ export function boundStructured(output: Record<string, unknown>): Record<string,
       heaviest(topLone).node.pop();
       droppedRecords++;
     } else {
-      break; // only scalars left; already minimal
+      break; // nothing left the reducer can trim (irreducible scalar mass)
     }
   }
 
-  return withFlags();
+  const flagged = withFlags();
+  if (JSON.stringify(flagged).length <= CHARACTER_LIMIT) return flagged;
+
+  // Last-resort guarantee: the loop could not fit the payload field-by-field (an
+  // irreducible mass of scalar fields, or the guard limit was hit). Keep only the
+  // load-bearing verdict scalars + an honest note so the result truly fits and
+  // `truncated` never claims a boundedness the payload does not have.
+  const minimal: Record<string, unknown> = {
+    truncated: true,
+    note: `structured payload exceeded the ${CHARACTER_LIMIT}-char cap and could not be trimmed field-by-field; reduced to a scalar summary. Narrow your query.`,
+  };
+  for (const key of ["path", "fragile", "tier", "action", "count", "total", "workspaceVersion"]) {
+    if (key in result) minimal[key] = result[key];
+  }
+  if (JSON.stringify(minimal).length <= CHARACTER_LIMIT) return minimal;
+  return {
+    truncated: true,
+    note: `structured payload exceeded the ${CHARACTER_LIMIT}-char cap; omitted. Narrow your query.`,
+  };
 }
 
 const SEVERITY_RANK: Record<string, number> = { deny: 3, warn: 2, annotate: 1, none: 0 };
