@@ -1,9 +1,11 @@
+import { dirname } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { isVerifyEnabled } from "../config.js";
 import { CHARACTER_LIMIT } from "../constants.js";
 import { aggregateAction, decideEnforcement, deriveTier } from "../evidence.js";
 import { findCoChangePartners, findFragile, isIndexed, loadWorkspace } from "../services/workspace.js";
-import { WorkspaceNotFoundError } from "../types.js";
+import { type NormalizedWorkspace, WorkspaceNotFoundError } from "../types.js";
 
 type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
@@ -37,6 +39,15 @@ async function guarded(fn: () => Promise<ToolResult>): Promise<ToolResult> {
 function truncate(text: string): string {
   if (text.length <= CHARACTER_LIMIT) return text;
   return `${text.slice(0, CHARACTER_LIMIT)}\n\n[truncated: response exceeded ${CHARACTER_LIMIT} characters. Narrow your query.]`;
+}
+
+/**
+ * Verify options for deriveTier, only when opt-in verify mode is on (HAC-111 R-V2).
+ * cwd is the workspace file's directory so the read-only git whitelist runs inside
+ * the repo. Undefined => OBSERVED-at-most (no live re-run).
+ */
+function verifyOpts(ws: NormalizedWorkspace): { verify: true; cwd: string } | undefined {
+  return isVerifyEnabled() ? { verify: true, cwd: dirname(ws.sourcePath) } : undefined;
 }
 
 const PathInput = z
@@ -91,7 +102,7 @@ Returns fragile:false with empty partners when the file has no recorded history 
         const fragile = findFragile(ws, path);
         const partners = findCoChangePartners(ws, path);
         const indexed = isIndexed(ws, path);
-        const tier = fragile ? deriveTier(fragile.evidence) : null;
+        const tier = fragile ? deriveTier(fragile.evidence, verifyOpts(ws)) : null;
         const assessment = decideEnforcement({
           path,
           fragile: Boolean(fragile),
@@ -288,7 +299,7 @@ Returns JSON:
         const ws = await loadWorkspace();
         const assessments = paths.map((p) => {
           const fragile = findFragile(ws, p);
-          const tier = fragile ? deriveTier(fragile.evidence) : null;
+          const tier = fragile ? deriveTier(fragile.evidence, verifyOpts(ws)) : null;
           return decideEnforcement({
             path: p,
             fragile: Boolean(fragile),

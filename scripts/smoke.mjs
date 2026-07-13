@@ -236,5 +236,95 @@ check(
 );
 rmSync(resolve(fixtureRoot, "packages"), { recursive: true, force: true });
 
+// ── HAC-111: VERIFIED tier is opt-in (--verify / WJSON_VERIFY), off by default ──
+// Probe fixture lives inside the repo so the read-only git whitelist reproduces.
+const vProbe = resolve(root, ".smoke-verify");
+mkdirSync(resolve(vProbe, ".agents"), { recursive: true });
+writeFileSync(
+  resolve(vProbe, ".agents/workspace.json"),
+  JSON.stringify({
+    manual: {
+      fragileFiles: [
+        {
+          path: "src/probe.ts",
+          reason: "verify probe (reproducible)",
+          evidence: [{ claim: "in a work tree", command: "git rev-parse --is-inside-work-tree", output: "true" }],
+        },
+        {
+          path: "src/nonrepro.ts",
+          reason: "verify probe (non-reproducing)",
+          evidence: [
+            {
+              claim: "absent",
+              command: "git log --oneline --grep '__wjson_no_such_marker__'",
+              output: "__wjson_no_such_marker__",
+            },
+          ],
+        },
+      ],
+      coChangePatterns: [
+        ["src/probe.ts", "src/partner.ts"],
+        ["src/nonrepro.ts", "src/np-partner.ts"],
+      ],
+    },
+  }),
+);
+function runHookIn(target, args, extraEnv = {}) {
+  return spawnSync("node", [resolve(root, "hooks/pre-edit-check.mjs"), ...args], {
+    cwd: target,
+    encoding: "utf8",
+    env: { ...process.env, WORKSPACE_JSON_ROOT: "", ...extraEnv },
+  });
+}
+const vOff = runHookIn(vProbe, ["--paths", "src/probe.ts"]);
+check(
+  "verify OFF by default -> reproducible-command evidence stays OBSERVED",
+  /tier OBSERVED/.test(vOff.stdout) && vOff.status === 2,
+  vOff.stdout.slice(0, 120),
+);
+const vOn = runHookIn(vProbe, ["--paths", "src/probe.ts", "--verify"]);
+check(
+  "hook --verify -> reproducible git command upgrades to VERIFIED",
+  /tier VERIFIED/.test(vOn.stdout) && vOn.status === 2,
+  vOn.stdout.slice(0, 120),
+);
+const vNon = runHookIn(vProbe, ["--paths", "src/nonrepro.ts", "--verify"]);
+check(
+  "hook --verify -> non-reproducing command downgrades to OBSERVED (never throws)",
+  /tier OBSERVED/.test(vNon.stdout) && vNon.status === 2,
+  vNon.stdout.slice(0, 120),
+);
+
+// R-V3 guard: the Codex hot path (a PreToolUse event on stdin) must NEVER verify,
+// even with WJSON_VERIFY=1 set — the reproducible triple must still read OBSERVED.
+const vHot = runHook(
+  {
+    tool_name: "apply_patch",
+    tool_input: { command: "*** Begin Patch\n*** Update File: src/probe.ts\n*** End Patch" },
+  },
+  { WORKSPACE_JSON_ROOT: vProbe, WJSON_VERIFY: "1" },
+);
+check(
+  "hot path (stdin event) never verifies even with WJSON_VERIFY=1 -> OBSERVED",
+  /tier OBSERVED/.test(vHot.stdout) && vHot.status === 2,
+  vHot.stdout.slice(0, 120),
+);
+
+const vTransport = new StdioClientTransport({
+  command: "node",
+  args: [resolve(root, "dist/index.js")],
+  env: { ...process.env, WORKSPACE_JSON_ROOT: vProbe, WJSON_VERIFY: "1" },
+});
+const vClient = new Client({ name: "smoke-verify", version: "0.0.0" });
+await vClient.connect(vTransport);
+const vTool = await vClient.callTool({ name: "workspace_get_file_context", arguments: { path: "src/probe.ts" } });
+check(
+  "tool with WJSON_VERIFY=1 -> file-context tier VERIFIED through the MCP surface",
+  vTool.structuredContent?.fragility?.tier === "VERIFIED",
+  JSON.stringify(vTool.structuredContent?.fragility?.tier),
+);
+await vClient.close();
+rmSync(vProbe, { recursive: true, force: true });
+
 console.log(`\n${failures === 0 ? "ALL GREEN" : `${failures} FAILURE(S)`}`);
 process.exit(failures === 0 ? 0 : 1);

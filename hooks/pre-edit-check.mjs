@@ -30,6 +30,7 @@ const dist = (p) => resolve(here, "..", "dist", p);
 
 const { loadWorkspace, findFragile, findCoChangePartners } = await import(dist("services/workspace.js"));
 const { deriveTier, decideEnforcement, aggregateAction } = await import(dist("evidence.js"));
+const { isVerifyEnabled } = await import(dist("config.js"));
 
 // ---------------------------------------------------------------------------
 // Patch parsing: extract touched paths from an apply_patch envelope or a
@@ -100,17 +101,22 @@ async function readStdin() {
 
 async function main() {
   let paths = [];
+  // VERIFIED is opt-in and CLI/CI-only. The Codex hot path (stdin event) NEVER
+  // verifies — re-running git per edit is a latency machine (HAC-111 R-V3).
+  let verify = false;
   const argv = process.argv.slice(2);
 
   if (argv[0] === "--paths") {
-    paths = argv.slice(1);
+    verify = isVerifyEnabled(process.env, argv);
+    paths = argv.slice(1).filter((p) => p !== "--verify");
   } else if (argv[0] === "--paths-stdin") {
+    verify = isVerifyEnabled(process.env, argv);
     paths = (await readStdin())
       .split("\n")
       .map((s) => s.trim())
       .filter(Boolean);
   } else {
-    // Hook mode: Codex sends the event JSON on stdin.
+    // Hook mode: Codex sends the event JSON on stdin. Verify stays OFF here.
     const raw = await readStdin();
     let event;
     try {
@@ -137,7 +143,9 @@ async function main() {
 
   const assessments = paths.map((p) => {
     const fragile = findFragile(ws, p);
-    const tier = fragile ? deriveTier(fragile.evidence) : null;
+    const tier = fragile
+      ? deriveTier(fragile.evidence, verify ? { verify: true, cwd: dirname(ws.sourcePath) } : undefined)
+      : null;
     return decideEnforcement({
       path: p,
       fragile: Boolean(fragile),
