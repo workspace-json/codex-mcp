@@ -6,7 +6,7 @@ import { ENV_WORKSPACE_PATH } from "../../src/constants.js";
 import { __resetCache, loadWorkspaceOutcome } from "../../src/services/workspace.js";
 
 /**
- * HAC-126: the pre-edit gate must distinguish "no evidence file" (silent, no
+ * HAC-130: the pre-edit gate must distinguish "no evidence file" (silent, no
  * opinion) from "evidence file present but unreadable / wrong-shape" (explicit
  * unknown/unavailable). loadWorkspaceOutcome is the testable decision point the
  * hook maps onto allow/warn.

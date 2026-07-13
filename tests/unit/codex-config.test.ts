@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
- * HAC-128: the committed project config Codex loads directly must launch the MCP
+ * HAC-129: the committed project config Codex loads directly must launch the MCP
  * server, not the installer. The installer binary dispatches zero args to
  * runInstall(); only the "server" arg starts the stdio server.
  */

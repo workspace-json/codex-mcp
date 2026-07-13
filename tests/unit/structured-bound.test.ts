@@ -3,7 +3,7 @@ import { CHARACTER_LIMIT } from "../../src/constants.js";
 import { boundStructured } from "../../src/tools/workspace.js";
 
 /**
- * HAC-127: the CHARACTER_LIMIT cap must also govern structuredContent, not only
+ * HAC-131: the CHARACTER_LIMIT cap must also govern structuredContent, not only
  * content[].text. A large fragile-file list previously serialized to ~134 KB on
  * the structured channel despite the 12 KB cap.
  */

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 /**
  * Re-review finding #4: the `--help` output in src/index.ts printed the exact
- * pre-HAC-128 broken config (`args` without `server`). Copy-pasting it relaunches
+ * pre-HAC-129 broken config (`args` without `server`). Copy-pasting it relaunches
  * the installer instead of the server. The example must include `server`.
  */
 
