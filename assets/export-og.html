@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Fonts loaded directly from Google Fonts (Plus Jakarta Sans + Geist Mono) -->
+<!-- rather than via the design system's local token file, so this asset has -->
+<!-- no dependency on a sibling _ds/ directory. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&family=Geist+Mono:wght@400;500;600;700&display=swap">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 52.5vw; background: #07100e; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .lockup-inner { display: flex; flex-direction: column; align-items: flex-start; gap: 2.4vw; }
+  .wordmark { font-family: "Plus Jakarta Sans", sans-serif; font-weight: 800; letter-spacing: -0.03em; white-space: nowrap; font-size: 6vw; color: #f5faf8; }
+  .json-suffix { color: #00c896; }
+  .slash { color: #00c896; font-weight: 500; }
+  .codex { font-weight: 500; }
+  .tagline { font-family: "Geist Mono", monospace; text-transform: uppercase; font-size: 1.3vw; color: #5d7a70; letter-spacing: 0.28em; margin-left: 0.4vw; }
+</style>
+</head>
+<body>
+  <div class="lockup-inner">
+    <div class="wordmark">workspace<span class="json-suffix">.json</span> <span class="slash">/</span> <span class="codex">Codex</span></div>
+    <div class="tagline">portable repository intelligence</div>
+  </div>
+</body>
+</html>
