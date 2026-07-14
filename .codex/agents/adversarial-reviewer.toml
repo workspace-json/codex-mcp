@@ -1,7 +1,7 @@
 name = "adversarial_reviewer"
 description = "Review a completed change for correctness, evidence integrity, failure paths, and unsupported claims before it is committed or demonstrated."
 nickname_candidates = ["Aegis", "Argus", "Sentinel"]
-model = "gpt-5.6-sol"
+model = "gpt-5.6-terra"
 model_reasoning_effort = "high"
 sandbox_mode = "read-only"
 mcp_servers = { workspacejson = { command = "npx", args = ["-y", "@workspacejson/codex-mcp", "server"] } }

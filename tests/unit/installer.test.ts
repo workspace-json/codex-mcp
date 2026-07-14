@@ -40,7 +40,7 @@ describe("fallback installer", () => {
 
     const reviewer = resolve(target, ".codex/agents/adversarial-reviewer.toml");
     expect(existsSync(reviewer)).toBe(true);
-    expect(readFileSync(reviewer, "utf8")).toContain('model = "gpt-5.6-sol"');
+    expect(readFileSync(reviewer, "utf8")).toContain('model = "gpt-5.6-terra"');
     expect(readFileSync(reviewer, "utf8")).toContain('sandbox_mode = "read-only"');
 
     writeFileSync(configPath, `approval_policy = "on-request"\n\n${config}`);
