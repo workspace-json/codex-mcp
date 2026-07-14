@@ -164,3 +164,55 @@ Append-only implementation log. Claims below are backed by the recorded commands
 - Next work: safe preparatory portions of HAC-120/121/122 may proceed, but final
   screenshots, VERIFIED wording, recording, and submission assets remain blocked
   by HAC-96/HAC-98 and human claim approval.
+
+## 2026-07-14 — HAC-121 narration production pipeline
+
+- Issue: HAC-121. Starting commit: `8539c640522486ef6ecedf9b628355ee422ab8a7`.
+  Implementation commit: `a59df916fb325c7ad745de054fcbbb0f214fbb39`
+  (`docs(hac-121): add narration production pipeline`). Branch/worktree: `main`,
+  `/Users/user1/Documents/workspacejson-codex-mcp`. Existing untracked
+  `.playwright-mcp/` and `hac120-desktop.png` were preserved and excluded.
+- Allowed/changed files: `.gitignore`, `demo/README.md`, and the `demo/narration/`
+  source tree: `script.md`, `scenes.json`, `pronunciations.json`,
+  `voice.example.json`, `generate.mjs`, `concatenate.mjs`,
+  `generate-captions.mjs`, and ignored-output `.gitkeep`. No runtime, hook,
+  package, lockfile, fixture/evidence, root README, manifest, or installer files
+  changed. `workspace_get_file_context` was unavailable, so no fragility or
+  co-change result was treated as approval.
+- Contents: seven source scenes (376 spoken words), provisional ElevenLabs direct
+  HTTP configuration (`eleven_flash_v2_5`, `mp3_44100_128`), environment-only
+  `ELEVENLABS_API_KEY`/`ELEVENLABS_VOICE_ID`, deterministic scene filenames,
+  SHA-256/duration/peak manifests, WAV-plus-MP3 concatenation, and sentence-level
+  SRT/VTT captions. Generated audio/manifests are ignored. HAC-98 and HAC-136
+  dependencies remain explicit placeholders; the script states the controlled
+  experimental-fixture disclosure and reviewer/enforcement separation.
+- Official API confirmation: current ElevenLabs documentation was checked for the
+  TTS stream endpoint, `model_id`, `voice_settings`, `output_format`, and
+  pronunciation-dictionary support. Direct HTTP was selected to avoid a new SDK
+  dependency. Server-side dictionary IDs were not introduced; checked-in spoken
+  substitutions preserve displayed branding separately.
+- Validation commands/results: `npm_config_cache=/tmp/workspacejson-codex-mcp-npm-cache
+  npm ci` passed; `npm run build` passed; `npm test` passed (69 tests); `npm run
+  smoke` reported `ALL GREEN`; `npx biome check demo` and all three `node --check`
+  checks passed; `node demo/narration/generate.mjs` exited 2 as intended with no
+  credentials and printed neither credential; isolated synthetic-audio execution
+  exercised concatenation, actual-duration timing, and 32 sentence captions for
+  seven scenes. `git diff --check` passed before commit.
+- Required publish gate: `npm_config_cache=/tmp/workspacejson-codex-mcp-npm-cache
+  npm run prepublishOnly` is incomplete because repository-wide `biome check .`
+  fails on pre-existing, out-of-scope `.claude/settings.local.json` formatting.
+  The scoped narration files passed Biome. No final ElevenLabs generation was run:
+  credentials/authorized voice are absent, which is an allowed preparatory state.
+- Adversarial review: two read-only `gpt-5.6-sol` high-reasoning invocations
+  (sessions `019f6112-2675-7670-a288-98e3b05588e9` and
+  `019f6114-3ee0-7832-9514-8dd529719409`) stopped at an
+  `Auth(AuthorizationRequired)` connector boundary before a verdict. Result is
+  unavailable, not PASS; rerun after the connector is authorized. No remediation
+  cycle was consumed because no reviewer finding was returned.
+- Remaining human gates: approve/reject the provisional authorized voice; approve
+  the narration; provide credentials for a draft generation; replace HAC-98 and
+  HAC-136 placeholders only after preserved evidence exists; then re-time,
+  regenerate, inspect audio peaks/captions, and run a completed adversarial review.
+  Final recording, edit, hosting, and claim reconciliation remain out of scope.
+- Next issue unblocked: none finally; HAC-160 can consume this source packet once
+  HAC-98/HAC-136 evidence and human approvals are available.
