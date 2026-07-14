@@ -1,20 +1,28 @@
-# workspace.json for Codex
+<br />
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/workspace-json-codex-lockup-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="assets/workspace-json-codex-lockup-light.png">
-  <img alt="workspace.json / Codex" src="assets/workspace-json-codex-lockup-dark.png" width="480">
-</picture>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/workspace-json-codex-lockup-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="assets/workspace-json-codex-lockup-light.png">
+    <img alt="workspace.json / Codex" src="assets/workspace-json-codex-lockup-dark.png" width="560">
+  </picture>
+</p>
 
-`@workspacejson/codex-mcp`
+<br />
 
-[![CI](https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml)
+<p align="center"><code>@workspacejson/codex-mcp</code></p>
 
-An MCP server that gives OpenAI Codex the one thing it structurally cannot derive from the current source tree: **behavioral history**. It reads a local [`workspace.json`](https://workspacejson.dev) and exposes, as Codex tools, which files are **fragile** (historically error-prone / high blast radius) and which files **co-change** (tend to be edited together).
+<p align="center">
+  <a href="https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Node >=20" src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js&logoColor=white">
+  <img alt="License Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue">
+</p>
 
-Codex reads the same tree you do. What it can't see is that `src/db/client.ts` has been reverted three times, or that touching the checkout route almost always means touching the session module too. That history lives in `workspace.json`. This server hands it to Codex, and via the MCP `instructions` field, tells Codex to consult it *before* editing a file rather than only when asked.
+<p align="center">Portable repository history helps Codex recognize fragile files and missing co-change partners before a supported edit lands.</p>
 
-At runtime, the server operates locally over stdio and does not upload repository contents. Initial package installation may contact npm.
+<p align="center">MCP supplies context. A deterministic hook enforces evidenced omissions. A read-only GPT-5.6 reviewer challenges the completed change.</p>
+
+<p align="center"><sub>Runs locally over stdio and does not upload repository contents. Initial package installation may contact npm.</sub></p>
 
 ## See it in 30 seconds
 
@@ -92,90 +100,19 @@ From a repo that has a committed `.agents/workspace.json`:
 
 No configuration beyond step 1 above. The `example/` fixture in this repo reproduces the exact denial shown in the demo.
 
-<!--
-==========================================================================
-INTERNAL — REMOVE BEFORE SHIP. Gate dependencies for each command above:
+## How it works
 
-Path 1:
-  - `npx @workspacejson/codex-mcp ...` requires the package PUBLISHED to npm
-    (release gate). Until published, judges use a local clone: swap `npx ...`
-    for `node ./dist/index.js server` and run `node scripts/install.mjs
-    --with-hook`.
-  - `install --with-hook` = HAC-91 R-C5-1/R-C5-2. Must be idempotent (clobber
-    guard) and must NOT run on connect (see HAC-129 — the committed config's
-    server arg is the fix).
-  - The manual config's `"server"` arg is HAC-129's fix. Do NOT ship the
-    args without it or opening the repo launches the installer.
+Evidence, action, and challenge are three separate planes with different authority: `workspace.json` is descriptive history, the MCP tools and deterministic hook are mechanical enforcement on supported edits, and the read-only GPT-5.6 reviewer is advisory. The reviewer never controls the hook, and a `PASS` verdict is not a safety certification.
 
-Path 2:
-  - `check --paths-stdin` = the hook's CLI mode (HAC-90 / hooks/pre-edit-check.mjs
-    already supports --paths-stdin). Confirm the bin exposes `check` as a
-    subcommand, or document `node hooks/pre-edit-check.mjs --paths-stdin`.
-
-Path 3:
-  - The .vsix does not exist yet (HAC-136 R-9, CONDITIONAL — build only if the
-    P0 trio + subagent land with buffer). If the extension is cut, delete this
-    entire section 3 and the "decorations" line from Verify.
-  - <version> filename is set by the extension package.json.
-
-Verify block:
-  - The "watch it refuse / cite evidence" flow depends on the frozen fixture
-    (HAC-96) and captured behavior (HAC-98). Do not publish the exact cited
-    strings until those are green; keep this description behavioral, not
-    quoting a specific SHA, until frozen.
-==========================================================================
--->
-
-## Evidence tiers (the part that is different)
-
-Every fragility signal carries a tier, derived **mechanically** by this package from the evidence attached to it. Producers (humans, tools, agents) record evidence; they never record a tier or a confidence value, and any such field in the artifact is ignored and re-derived:
-
-| Tier | Meaning | Derivation |
-| --- | --- | --- |
-| `ASSERTED` | Claimed, no evidence recorded | zero evidence records |
-| `OBSERVED` | Something was seen and written down | at least one evidence record (`{claim, command?, output?}` or bare observation) |
-| `VERIFIED` | A green we watched | at least one evidence triple whose read-only command was re-run locally and reproduced its recorded output (`--verify` mode; whitelisted `git log/show/diff/grep/rev-parse/status` only) |
-
-Tier drives enforcement strength, mechanically: an evidenced-fragile file whose recorded co-change partners are absent from the changeset is **denied**; evidenced fragility with partners covered **warns**; `ASSERTED` fragility only **annotates**. And deliberately: this system can justify a block or a warning, but it structurally never emits a safety approval. Absence of recorded risk is reported as absence, never as "safe" — the evidence class that would certify safety is exactly the class that cannot be verified by read-only re-run.
-
-## Hooks (deterministic enforcement)
-
-`hooks/pre-edit-check.mjs` is a PreToolUse hook for Codex's `apply_patch`: it parses the touched paths from the patch, assesses the whole changeset, and denies or warns before the edit lands. It is also the repo-native fallback and CI consumer:
-
-```bash
-git diff --name-only | node hooks/pre-edit-check.mjs --paths-stdin
-node hooks/pre-edit-check.mjs --paths src/routes/checkout.ts
-```
-
-The hook fails open on missing or malformed intelligence and never crashes the edit loop. Fail-open is explicit: Codex receives an `unavailable` warning explaining that no fragility/co-change determination was made and how to validate or locate the artifact. A block is triggered by an **evidenced partner omission**: a co-change relationship recorded in `workspace.json` is absent from the proposed patch. It does not mean the partner is universally required for every semantic change.
-
-## GPT-5.6 adversarial reviewer
-
-The full installer registers a project-scoped `adversarial_reviewer` custom agent pinned to GPT-5.6 with high reasoning and a read-only sandbox. Invoke it after a logical change and before commit or demonstration. It returns a visible, attributed `BLOCK` or `PASS` verdict with reproduced evidence and explicit review gaps.
-
-The reviewer is advisory. It cannot write files and its verdict never changes the deterministic hook decision. `PASS` means no blocking issue was found in the reviewed scope; it is not a safety certification. Missing or malformed workspace evidence is reported as `UNKNOWN`/`UNAVAILABLE`, not guessed away.
+Full derivation rules for evidence tiers (`ASSERTED`/`OBSERVED`/`VERIFIED`), the hook's fail-open behavior, and the GPT-5.6 reviewer's scope live in [`docs/how-it-works.md`](docs/how-it-works.md).
 
 ## Tools
 
-All are read-only and operate on the local `workspace.json`.
-
-- **`workspace_get_file_context(path)`** — the primary call. Returns fragility (with reason/score/evidence when present) and co-change partners for one file. Call it before editing. Returns `fragile:false` with an empty partner list when a file has no recorded history: that means **no recorded risk**, not **verified safe**. The system never issues a safety approval; it only reports whether the evidence it holds supports a concern.
-- **`workspace_get_cochange_partners(path)`** — the files that historically change with this one. Call it after an edit to catch related updates.
-- **`workspace_list_fragile_files(limit?)`** — all fragile files, most fragile first, plus bounded primitive framework context from `generated.frameworkManifest`. Orientation at the start of a task.
-- **`workspace_assess_change(paths[])`** — evaluate a whole changeset; returns the mechanical `deny`/`warn`/`annotate`/`none` decision with per-file assessments. The MCP twin of the hook.
+All are read-only and operate on the local `workspace.json`: `workspace_get_file_context`, `workspace_get_cochange_partners`, `workspace_list_fragile_files`, and `workspace_assess_change`. Full reference in [`docs/tools.md`](docs/tools.md).
 
 ## The `workspace.json` shape it reads
 
-This server reads a tolerant superset of the [workspace.json standard](https://workspacejson.dev). The fields consumed:
-
-| Field | Used for |
-| --- | --- |
-| `manual.fragileFiles` | fragility signal (accepts `string[]` or `{ path, reason, score, evidence }[]`) |
-| `manual.coChangePatterns` | co-change groups (accepts `{ files: [] }[]`, `string[][]`, or adjacency map) |
-| `generated.fileIndex` | whether a queried path is indexed |
-| `generated.frameworkManifest` | framework context |
-
-> **Provenance note:** the normalizer in `src/services/workspace.ts` is the single place that touches raw file shape. Field names above track the standard's `v0.x` line; if the canonical schema in `@workspacejson/spec` differs, adjust the normalizer only. The rest of the server depends on the normalized model in `src/types.ts`, never the raw file.
+This server reads a tolerant superset of the [workspace.json standard](https://workspacejson.dev): `manual.fragileFiles`, `manual.coChangePatterns`, `generated.fileIndex`, and `generated.frameworkManifest`. Field-level detail and the normalizer's provenance note are in [`docs/workspace-contract.md`](docs/workspace-contract.md).
 
 ## Develop
 
@@ -185,19 +122,15 @@ npm run build     # tsc, strict
 npm run smoke     # spawns the server over stdio and drives it via a real MCP client
 ```
 
-The smoke test (`scripts/smoke.mjs`) exercises the protocol end to end: initialize, `tools/list`, all four tools, absolute-vs-relative path matching, unknown-file behavior, bounded text and structured responses, explicit fail-open warnings, hook decisions, and opt-in live verification.
+What the smoke test actually exercises is documented in [`docs/development.md`](docs/development.md).
 
 ## For the OpenAI Build Week submission
 
-> This project was built during OpenAI Build Week as a new Codex integration for the open `workspace.json` standard. The `workspace.json` standard and its generator (`@workspacejson/cli`) are pre-existing open-source work, used here as a dependency the same way any participant could depend on it. The Build Week contribution is `@workspacejson/codex-mcp`: the MCP server, its tool surface, deterministic hook, packaging, and GPT-5.6 read-only adversarial reviewer, all authored or integrated in-window and contained in this repository.
+This project was built during OpenAI Build Week as a new Codex integration for the open `workspace.json` standard; the standard itself is pre-existing open-source work used here as a dependency. Full disclosure of what was authored in-window versus pre-existing is in [`docs/build-week.md`](docs/build-week.md).
 
-Codex accelerated implementation, regression-test generation, packaging validation, and adversarial review. Human decisions control the product boundary: deterministic evidence remains the enforcement plane; GPT-5.6 performs visible semantic risk review without write or enforcement authority; Q approves the fixture, claims, evidence tiers, design, narration, and submission.
+## Verification status
 
-## Verification status (honest tiers on our own claims)
-
-VERIFIED (the smoke suite drives the built server over stdio and the hook via stdin): protocol handshake and instructions, all four tools, tier derivation for ASSERTED/OBSERVED/VERIFIED (the VERIFIED tier is opt-in via `--verify` / `WJSON_VERIFY=1`: it re-runs a whitelisted read-only `git` command and reproduces its recorded output, downgrading to OBSERVED when it does not — never on the hook hot path), the deny/warn/none enforcement matrix, evidence citation in deny reasons, META-102 exact-first path matching with absolute-path fallback and fuzzy-match rejection, bounded text and structured payloads, root-marker upward walk from a nested cwd, hook exit codes and JSON emission, and explicit fail-open warnings for missing, malformed, or unparseable inputs.
-
-VERIFIED on real Codex 0.144.1 (2026-07-13): the installed plugin manifest loaded its `PreToolUse` hook; `hookSpecificOutput.permissionDecision: "deny"` plus exit code 2 blocked `apply_patch` under `WJSON_DENY_ALL=1`; unsetting it allowed a normal edit; the fixture denied a checkout-only edit with the recorded `revert d4e5f6` evidence and missing partners; and a single patch covering checkout, session, and format surfaced cautionary context and proceeded. The output contract and manifest remain isolated to single adapter points (`emitDecision()` in the hook; `.codex-plugin/plugin.json`).
+Claims about this project are tagged with the same honest evidence tiers the tool itself uses. The full breakdown of what's `VERIFIED` (smoke suite, real-Codex hook denial) versus asserted is in [`docs/verification.md`](docs/verification.md).
 
 ## Current limitations
 
@@ -207,6 +140,16 @@ VERIFIED on real Codex 0.144.1 (2026-07-13): the installed plugin manifest loade
 - Stale evidence is not treated as proof of current risk.
 - `fragile:false` means the file has no recorded fragility, not that it is verified safe.
 - This does not replace tests, review, or repository instructions.
+
+## Learn more
+
+- [How it works](docs/how-it-works.md) — evidence tiers, hook enforcement, GPT-5.6 reviewer
+- [Tools](docs/tools.md) — full MCP tool reference
+- [The workspace.json contract](docs/workspace-contract.md) — fields consumed and normalization
+- [Verification](docs/verification.md) — what's been verified and how
+- [Build Week disclosure](docs/build-week.md) — what was authored in-window
+- [Development](docs/development.md) — contributor commands
+- [Clean-install audit](docs/clean-install-audit.md) · [Fixture verification](docs/fixture-verification.md)
 
 ## License
 
