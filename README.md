@@ -2,6 +2,8 @@
 
 `@workspacejson/codex-mcp`
 
+[![CI](https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml)
+
 An MCP server that gives OpenAI Codex the one thing it structurally cannot derive from the current source tree: **behavioral history**. It reads a local [`workspace.json`](https://workspacejson.dev) and exposes, as Codex tools, which files are **fragile** (historically error-prone / high blast radius) and which files **co-change** (tend to be edited together).
 
 Codex reads the same tree you do. What it can't see is that `src/db/client.ts` has been reverted three times, or that touching the checkout route almost always means touching the session module too. That history lives in `workspace.json`. This server hands it to Codex, and via the MCP `instructions` field, tells Codex to consult it *before* editing a file rather than only when asked.
