@@ -216,3 +216,31 @@ Append-only implementation log. Claims below are backed by the recorded commands
   Final recording, edit, hosting, and claim reconciliation remain out of scope.
 - Next issue unblocked: none finally; HAC-160 can consume this source packet once
   HAC-98/HAC-136 evidence and human approvals are available.
+
+## 2026-07-14 — HAC-159 append-only v2 reconstruction
+
+- Dedicated worktree: `/private/tmp/workspacejson-hac159-fixture`, starting from
+  fixture `main` `366acf572e4fa943109d1307e19faeeecafb7921`. v1 history,
+  `90eee28`, `5707194`, and `fixture-v1` were preserved unchanged.
+- Local-only candidate: branch `fixture-v2-reconstructed`, packet commit
+  `4ee7ed779de9e33f90b5302aa52a141e5f415429`, local `fixture-v2` tag, and
+  workspace SHA-256
+  `3dc5ebe2b82e5d6e8b7eae226554e4724cf41fec6f7d8c9d0095c51ac3f6e871`.
+  No candidate branch, tag, merge, or publication was pushed.
+- Re-executed evidence: `7368876` route-only exits 1 with the session-contract
+  `$NaN` failure; `57c5b1f` route+session exits 1 with formatter
+  `Unsupported currency: undefined`; `d29d0e1` route+session+format exits 0
+  with both focused tests passing. Raw outputs, hashes, and the regeneration
+  script are in the fixture candidate.
+- Review: Terra cycle 1 (`019f6271-794f-7ab0-ab2b-262d390142fe`) BLOCKed on
+  unsupported HAC-96 prompt/model assertions; they were removed. Cycle 2
+  (`019f6273-5322-79c2-a748-26b5921cb007`) PASSed. Its live remote query was
+  DNS-constrained; local tracking refs showed the candidate unmerged/unpushed.
+- Verification: fixture `npm test`, script syntax, and `git diff --check`
+  passed. `npm ci` is unavailable because the deliberately minimal fixture has
+  no lockfile; `npm pack --dry-run` is unavailable because its private package
+  has no name/version. Root fixture-verification and MORNING-HANDOFF updates
+  pass `git diff --check`.
+- Remaining decision: review the local candidate before any remote push/PR
+  action. HAC-96 must then run three identical unprotected trials; HAC-98 stays
+  unauthorized until that evidence chain is complete.

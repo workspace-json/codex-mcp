@@ -1,44 +1,43 @@
 # Checkout fixture verification
 
-Status: artifact verified; external checkout baseline blocked.
+Status: v2 reconstructed locally; not merged, published, or eligible for HAC-98.
 
-## Committed artifact
+## v2 candidate
 
-- Repository: `https://github.com/workspace-json/codex-mcp`
-- Artifact: `fixture/.agents/workspace.json`
-- Introduced by commit: `687089e`
-- Git blob: `928a0fcd07d2aad9a8f63ed444de621ee3ae9e2a`
-- SHA-256:
-  `54d9862dfabcc74fb6e3bc1ca8de5f755418989d12eafc1b91caf444b1d02428`
-- Spec version recorded by the artifact: `0.4`
-- Framework context: Node, Next, Vitest
+- Repository: `workspace-json/codex-demo-fixture`
+- Local branch: `fixture-v2-reconstructed`, based on `main` commit
+  `366acf572e4fa943109d1307e19faeeecafb7921`.
+- Packet commit: `4ee7ed779de9e33f90b5302aa52a141e5f415429`.
+- Local-only annotated tag: `fixture-v2`.
+- Workspace artifact: `.agents/workspace.json`.
+- Workspace SHA-256:
+  `3dc5ebe2b82e5d6e8b7eae226554e4724cf41fec6f7d8c9d0095c51ac3f6e871`.
+- Node runtime: `v22.19.0`; focused command: `npm test`.
 
-No generator command was run during this session. `git status` reports no change to
-the committed artifact.
+## Re-executed partner evidence
 
-## Proof relationship
+| Commit | State | Observed result |
+| --- | --- | --- |
+| `736887631fc8f411a8444de75ec9e10d1a4c8e7d` | Route-only money-object migration | Exit 1. Legacy session receives an object; USD becomes `$NaN` and JPY becomes USD/$NaN. |
+| `57c5b1f90d890790bd7eb7a0ecba1c6bfed1af43` | Route plus session, legacy formatter | Exit 1. Formatter fails with `Unsupported currency: undefined`. |
+| `d29d0e195acffb92f4ea880c08f7ca715d3f1a07` | Route, session, and formatter updated | Exit 0; both focused USD and JPY tests pass. |
 
-- Primary path: `src/routes/checkout.ts`
-- Partners: `src/auth/session.ts`, `src/lib/format.ts`
-- Fragility reason: payment edge cases
-- Evidence: `revert d4e5f6 (payment rounding)` and
-  `incident 2026-03-02: double-charge on retry`
+Full raw TAP output, command, Node version, exit status, and output hash are in
+the candidate fixture's `evidence/` directory. `scripts/regenerate-v2-proof.mjs`
+re-executes the three commits in detached worktrees and regenerates the packet.
 
-Integrated smoke and packed-artifact runs establish:
+## History boundary
 
-- checkout alone → exit 2 / deterministic deny naming both partners and evidence;
-- checkout + session + format → warning context and edit proceeds;
-- reset for the committed artifact →
-  `git restore -- fixture/.agents/workspace.json`.
+`fixture-v1`, including commits `90eee28` and `5707194`, remains unchanged and
+is cited only as the superseded route-regression experiment. v2 is a separate,
+append-only experiment; no v1 evidence is used in its artifact or README.
 
-## Open HAC-96 gate
+## Remaining gates
 
-This repository contains the intelligence artifact but not the checkout source files
-or the source repository/commit whose history produced `d4e5f6`. Therefore the
-required three identical unprotected Codex runs, incomplete/corrected source patches,
-targeted application tests, and source reset command cannot be reproduced honestly
-from this checkout.
-
-To close HAC-96, Q must identify or approve the external checkout repository and
-exact commit containing the three paths. Then run the immutable prompt three times
-with identical model/settings, preserve all outputs, and record the omission rate.
+- Reviewer cycle 1 BLOCKed on unsupported HAC-96 prompt/model assertions; the
+  candidate removed them. Reviewer cycle 2 PASSed with no blocking findings.
+- Review the candidate before any remote branch, tag, merge, or publication
+  action. No such decision is implied by this document.
+- HAC-96 must still run and preserve three identical unprotected Codex trials
+  with model/release/settings and omission rate.
+- HAC-98 remains unauthorized until reviewer cycle 2 passes on v2.
