@@ -157,8 +157,78 @@ check(
   lf.structuredContent?.total === 3 && lf.structuredContent?.files?.[0]?.path === "src/db/client.ts",
   JSON.stringify(lf.structuredContent?.files?.map((f) => f.path)),
 );
+check(
+  "list_fragile_files surfaces bounded framework context",
+  lf.structuredContent?.framework?.framework === "next" && lf.structuredContent?.framework?.testRunner === "vitest",
+  JSON.stringify(lf.structuredContent?.framework),
+);
 
 await client.close();
+
+// ── HAC-131: both MCP channels stay bounded, including nested structures ──
+const boundRoot = resolve(root, ".smoke-bound");
+mkdirSync(resolve(boundRoot, ".agents"), { recursive: true });
+writeFileSync(
+  resolve(boundRoot, ".agents/workspace.json"),
+  JSON.stringify({
+    manual: {
+      fragileFiles: [
+        {
+          path: "src/huge.ts",
+          reason: "large evidence boundary",
+          evidence: Array.from({ length: 400 }, (_, index) => ({
+            claim: `claim-${index}-${"x".repeat(300)}`,
+          })),
+        },
+        ...Array.from({ length: 299 }, (_, index) => ({
+          path: `src/list-${index}.ts`,
+          reason: "large list boundary ".repeat(8),
+        })),
+      ],
+      coChangePatterns: [["src/huge.ts", ...Array.from({ length: 800 }, (_, index) => `src/partner-${index}.ts`)]],
+    },
+  }),
+);
+const boundTransport = new StdioClientTransport({
+  command: "node",
+  args: [resolve(root, "dist/index.js")],
+  env: { ...process.env, WORKSPACE_JSON_ROOT: boundRoot },
+});
+const boundClient = new Client({ name: "smoke-bound", version: "0.0.0" });
+await boundClient.connect(boundTransport);
+const boundList = await boundClient.callTool({ name: "workspace_list_fragile_files", arguments: { limit: 500 } });
+check(
+  "structured list response is bounded and count remains honest",
+  JSON.stringify(boundList.structuredContent).length <= 12_000 &&
+    boundList.structuredContent?.truncated === true &&
+    boundList.structuredContent?.total === 300 &&
+    boundList.structuredContent?.count === boundList.structuredContent?.files?.length,
+  `size=${JSON.stringify(boundList.structuredContent).length} count=${boundList.structuredContent?.count}`,
+);
+const boundContext = await boundClient.callTool({
+  name: "workspace_get_file_context",
+  arguments: { path: "src/huge.ts" },
+});
+check(
+  "structured file context bounds nested evidence",
+  JSON.stringify(boundContext.structuredContent).length <= 12_000 &&
+    boundContext.structuredContent?.path === "src/huge.ts" &&
+    boundContext.structuredContent?.fragile === true,
+  `size=${JSON.stringify(boundContext.structuredContent).length}`,
+);
+const boundAssess = await boundClient.callTool({
+  name: "workspace_assess_change",
+  arguments: { paths: ["src/huge.ts"] },
+});
+check(
+  "structured assessment preserves deny while bounding missing partners",
+  JSON.stringify(boundAssess.structuredContent).length <= 12_000 &&
+    boundAssess.structuredContent?.action === "deny" &&
+    boundAssess.structuredContent?.assessments?.[0]?.action === "deny",
+  `size=${JSON.stringify(boundAssess.structuredContent).length} action=${boundAssess.structuredContent?.action}`,
+);
+await boundClient.close();
+rmSync(boundRoot, { recursive: true, force: true });
 
 // ── Hook script, driven exactly as Codex would drive it ──
 function runHook(stdinObj, extraEnv = {}) {
@@ -216,10 +286,44 @@ check(
 );
 
 const h4 = runHook({ garbage: true });
-check("hook: unparseable/pathless event stays out of the way", h4.status === 0);
+check(
+  "hook: unparseable/pathless event warns but fails open",
+  h4.status === 0 && /additionalContext/.test(h4.stdout) && /unavailable/i.test(h4.stdout),
+  `status=${h4.status} out=${h4.stdout.slice(0, 120)}`,
+);
 
 const h5 = runHook(patchClean, { WJSON_DENY_ALL: "1" });
 check("hook: WJSON_DENY_ALL wiring probe denies", h5.status === 2 && /deny/.test(h5.stdout));
+
+// ── HAC-130: unavailable intelligence is explicit, never a silent allow ──
+const unavailableRoot = resolve(root, ".smoke-unavailable");
+mkdirSync(resolve(unavailableRoot, ".agents"), { recursive: true });
+writeFileSync(resolve(unavailableRoot, ".agents/workspace.json"), "{not-json");
+const corrupt = runHook(patchClean, { WORKSPACE_JSON_ROOT: unavailableRoot });
+check(
+  "hook: corrupt workspace.json warns and fails open",
+  corrupt.status === 0 &&
+    /additionalContext/.test(corrupt.stdout) &&
+    /Failed to parse workspace\.json/.test(corrupt.stdout),
+  `status=${corrupt.status} out=${corrupt.stdout.slice(0, 160)}`,
+);
+writeFileSync(resolve(unavailableRoot, ".agents/workspace.json"), "[]");
+const invalidRoot = runHook(patchClean, { WORKSPACE_JSON_ROOT: unavailableRoot });
+check(
+  "hook: structurally invalid workspace.json warns and fails open",
+  invalidRoot.status === 0 &&
+    /additionalContext/.test(invalidRoot.stdout) &&
+    /root must be an object/.test(invalidRoot.stdout),
+  `status=${invalidRoot.status} out=${invalidRoot.stdout.slice(0, 160)}`,
+);
+rmSync(resolve(unavailableRoot, ".agents/workspace.json"), { force: true });
+const missing = runHook(patchClean, { WORKSPACE_JSON_ROOT: unavailableRoot });
+check(
+  "hook: missing workspace.json warns and fails open",
+  missing.status === 0 && /additionalContext/.test(missing.stdout) && /No workspace\.json found/.test(missing.stdout),
+  `status=${missing.status} out=${missing.stdout.slice(0, 160)}`,
+);
+rmSync(unavailableRoot, { recursive: true, force: true });
 
 // ── Root-marker walk: run hook from a NESTED directory, no env root ──
 const nested = resolve(fixtureRoot, "packages/deep/nested");
@@ -235,6 +339,96 @@ check(
   `status=${h6.status} stderr=${h6.stderr.slice(0, 80)}`,
 );
 rmSync(resolve(fixtureRoot, "packages"), { recursive: true, force: true });
+
+// ── HAC-111: VERIFIED tier is opt-in (--verify / WJSON_VERIFY), off by default ──
+// Probe fixture lives inside the repo so the read-only git whitelist reproduces.
+const vProbe = resolve(root, ".smoke-verify");
+mkdirSync(resolve(vProbe, ".agents"), { recursive: true });
+writeFileSync(
+  resolve(vProbe, ".agents/workspace.json"),
+  JSON.stringify({
+    manual: {
+      fragileFiles: [
+        {
+          path: "src/probe.ts",
+          reason: "verify probe (reproducible)",
+          evidence: [{ claim: "in a work tree", command: "git rev-parse --is-inside-work-tree", output: "true" }],
+        },
+        {
+          path: "src/nonrepro.ts",
+          reason: "verify probe (non-reproducing)",
+          evidence: [
+            {
+              claim: "absent",
+              command: "git log --oneline --grep '__wjson_no_such_marker__'",
+              output: "__wjson_no_such_marker__",
+            },
+          ],
+        },
+      ],
+      coChangePatterns: [
+        ["src/probe.ts", "src/partner.ts"],
+        ["src/nonrepro.ts", "src/np-partner.ts"],
+      ],
+    },
+  }),
+);
+function runHookIn(target, args, extraEnv = {}) {
+  return spawnSync("node", [resolve(root, "hooks/pre-edit-check.mjs"), ...args], {
+    cwd: target,
+    encoding: "utf8",
+    env: { ...process.env, WORKSPACE_JSON_ROOT: "", ...extraEnv },
+  });
+}
+const vOff = runHookIn(vProbe, ["--paths", "src/probe.ts"]);
+check(
+  "verify OFF by default -> reproducible-command evidence stays OBSERVED",
+  /tier OBSERVED/.test(vOff.stdout) && vOff.status === 2,
+  vOff.stdout.slice(0, 120),
+);
+const vOn = runHookIn(vProbe, ["--paths", "src/probe.ts", "--verify"]);
+check(
+  "hook --verify -> reproducible git command upgrades to VERIFIED",
+  /tier VERIFIED/.test(vOn.stdout) && vOn.status === 2,
+  vOn.stdout.slice(0, 120),
+);
+const vNon = runHookIn(vProbe, ["--paths", "src/nonrepro.ts", "--verify"]);
+check(
+  "hook --verify -> non-reproducing command downgrades to OBSERVED (never throws)",
+  /tier OBSERVED/.test(vNon.stdout) && vNon.status === 2,
+  vNon.stdout.slice(0, 120),
+);
+
+// R-V3 guard: the Codex hot path (a PreToolUse event on stdin) must NEVER verify,
+// even with WJSON_VERIFY=1 set — the reproducible triple must still read OBSERVED.
+const vHot = runHook(
+  {
+    tool_name: "apply_patch",
+    tool_input: { command: "*** Begin Patch\n*** Update File: src/probe.ts\n*** End Patch" },
+  },
+  { WORKSPACE_JSON_ROOT: vProbe, WJSON_VERIFY: "1" },
+);
+check(
+  "hot path (stdin event) never verifies even with WJSON_VERIFY=1 -> OBSERVED",
+  /tier OBSERVED/.test(vHot.stdout) && vHot.status === 2,
+  vHot.stdout.slice(0, 120),
+);
+
+const vTransport = new StdioClientTransport({
+  command: "node",
+  args: [resolve(root, "dist/index.js")],
+  env: { ...process.env, WORKSPACE_JSON_ROOT: vProbe, WJSON_VERIFY: "1" },
+});
+const vClient = new Client({ name: "smoke-verify", version: "0.0.0" });
+await vClient.connect(vTransport);
+const vTool = await vClient.callTool({ name: "workspace_get_file_context", arguments: { path: "src/probe.ts" } });
+check(
+  "tool with WJSON_VERIFY=1 -> file-context tier VERIFIED through the MCP surface",
+  vTool.structuredContent?.fragility?.tier === "VERIFIED",
+  JSON.stringify(vTool.structuredContent?.fragility?.tier),
+);
+await vClient.close();
+rmSync(vProbe, { recursive: true, force: true });
 
 console.log(`\n${failures === 0 ? "ALL GREEN" : `${failures} FAILURE(S)`}`);
 process.exit(failures === 0 ? 0 : 1);

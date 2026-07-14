@@ -39,11 +39,22 @@ export function resolveWorkspacePath(): string {
       searched.push(p);
       if (existsSync(p)) return p;
     }
+    // A workspace artifact belongs to one repository. Never cross the nearest
+    // Git boundary and accidentally consume evidence from an ancestor repo.
+    if (existsSync(resolve(dir, ".git"))) break;
     const parent = dirname(dir);
     if (parent === dir) break; // filesystem root
     dir = parent;
   }
   throw new WorkspaceNotFoundError(searched.slice(0, 8));
+}
+
+function optionalRecord(value: unknown, field: string): Record<string, unknown> {
+  if (value === undefined) return {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`Invalid workspace.json: ${field} must be an object`);
+  }
+  return value as Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,9 +135,9 @@ function normalizeFileIndex(raw: unknown): string[] {
 }
 
 export function normalizeWorkspace(sourcePath: string, parsed: unknown): NormalizedWorkspace {
-  const root = asRecord(parsed);
-  const manual = asRecord(root.manual);
-  const generated = asRecord(root.generated);
+  const root = optionalRecord(parsed, "root");
+  const manual = optionalRecord(root.manual, "manual");
+  const generated = optionalRecord(root.generated, "generated");
 
   // Per the formal v0.4 schema, compatibility is governed by generated.specVersion;
   // top level permits only manual/generated/agents/health. Legacy variants tolerated.

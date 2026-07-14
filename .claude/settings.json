@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -e '.stop_hook_active == true' >/dev/null 2>&1 && exit 0; [ -n \"$(git status --porcelain -- ':!.claude' 2>/dev/null)\" ] || exit 0; jq -n '{decision:\"block\", reason:\"Uncommitted source changes present. Before finishing, run an adversarial review on the working diff and resolve any BLOCK verdict. If already reviewed, you may stop.\"}'",
+            "statusMessage": "Checking for unreviewed changes..."
+          }
+        ]
+      }
+    ]
+  }
+}

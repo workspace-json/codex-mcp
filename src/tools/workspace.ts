@@ -1,9 +1,11 @@
+import { dirname } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { isVerifyEnabled } from "../config.js";
 import { CHARACTER_LIMIT } from "../constants.js";
 import { aggregateAction, decideEnforcement, deriveTier } from "../evidence.js";
 import { findCoChangePartners, findFragile, isIndexed, loadWorkspace } from "../services/workspace.js";
-import { WorkspaceNotFoundError } from "../types.js";
+import { type NormalizedWorkspace, WorkspaceNotFoundError } from "../types.js";
 
 type ToolResult = {
   content: Array<{ type: "text"; text: string }>;
@@ -36,7 +38,155 @@ async function guarded(fn: () => Promise<ToolResult>): Promise<ToolResult> {
 
 function truncate(text: string): string {
   if (text.length <= CHARACTER_LIMIT) return text;
-  return `${text.slice(0, CHARACTER_LIMIT)}\n\n[truncated: response exceeded ${CHARACTER_LIMIT} characters. Narrow your query.]`;
+  const suffix = `\n\n[truncated: response exceeded ${CHARACTER_LIMIT} characters. Narrow your query.]`;
+  return `${text.slice(0, CHARACTER_LIMIT - suffix.length)}${suffix}`;
+}
+
+function jsonLength(value: unknown): number {
+  return JSON.stringify(value).length;
+}
+
+type ContainerCandidate = {
+  container: unknown[] | Record<string, unknown>;
+  key?: string;
+  size: number;
+};
+
+/**
+ * Bound structuredContent as strictly as the text channel. Information is
+ * reduced from the tails of nested arrays, then long strings, then optional
+ * object properties. The first assessment is retained so a deny never loses
+ * its primary reason (HAC-131).
+ */
+export function boundStructured(input: Record<string, unknown>): Record<string, unknown> {
+  if (jsonLength(input) <= CHARACTER_LIMIT) return input;
+
+  const output = structuredClone(input);
+  if (Array.isArray(output.assessments)) {
+    const primaryDeny = output.assessments.findIndex(
+      (assessment) =>
+        assessment !== null &&
+        typeof assessment === "object" &&
+        !Array.isArray(assessment) &&
+        (assessment as Record<string, unknown>).action === "deny",
+    );
+    if (primaryDeny > 0) {
+      const [deny] = output.assessments.splice(primaryDeny, 1);
+      output.assessments.unshift(deny);
+    }
+  }
+  for (const key of ["files", "partners"] as const) {
+    if (Array.isArray(output[key]) && typeof output.count === "number" && output.total === undefined) {
+      output.total = output.count;
+    }
+  }
+  output.truncated = true;
+  output.omitted = 0;
+  output.characterLimit = CHARACTER_LIMIT;
+
+  const protectedRootKeys = new Set([
+    "action",
+    "assessments",
+    "characterLimit",
+    "count",
+    "files",
+    "fragile",
+    "indexed",
+    "omitted",
+    "path",
+    "total",
+    "truncated",
+    "workspaceVersion",
+  ]);
+
+  for (let attempts = 0; jsonLength(output) > CHARACTER_LIMIT && attempts < 20_000; attempts++) {
+    const arrays: ContainerCandidate[] = [];
+    const strings: ContainerCandidate[] = [];
+    const properties: ContainerCandidate[] = [];
+
+    const visit = (value: unknown, path: string[]): void => {
+      if (Array.isArray(value)) {
+        const keepFirstAssessment = path.length === 1 && path[0] === "assessments";
+        if (value.length > (keepFirstAssessment ? 1 : 0)) {
+          arrays.push({ container: value, size: jsonLength(value.at(-1)) });
+        }
+        value.forEach((entry, index) => visit(entry, [...path, String(index)]));
+        return;
+      }
+      if (!value || typeof value !== "object") return;
+      for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+        if (typeof child === "string" && child.length > 128) {
+          strings.push({ container: value as Record<string, unknown>, key, size: child.length });
+        } else {
+          visit(child, [...path, key]);
+        }
+        const primaryAssessmentKey =
+          path.length === 2 &&
+          path[0] === "assessments" &&
+          path[1] === "0" &&
+          ["action", "message", "path"].includes(key);
+        if (!(path.length === 0 && protectedRootKeys.has(key)) && !primaryAssessmentKey) {
+          properties.push({ container: value as Record<string, unknown>, key, size: jsonLength(child) });
+        }
+      }
+    };
+    visit(output, []);
+
+    const array = arrays.sort((a, b) => b.size - a.size)[0];
+    const string = strings.sort((a, b) => b.size - a.size)[0];
+    const property = properties.sort((a, b) => b.size - a.size)[0];
+
+    if (array && array.size >= (string?.size ?? 0)) {
+      (array.container as unknown[]).pop();
+      output.omitted = Number(output.omitted) + 1;
+      continue;
+    }
+    if (string?.key) {
+      const record = string.container as Record<string, unknown>;
+      const current = record[string.key] as string;
+      const nextLength = Math.max(96, Math.floor(current.length / 2));
+      record[string.key] = `${current.slice(0, nextLength)}… [truncated]`;
+      output.omitted = Number(output.omitted) + current.length - nextLength;
+      continue;
+    }
+    if (property?.key) {
+      delete (property.container as Record<string, unknown>)[property.key];
+      output.omitted = Number(output.omitted) + 1;
+      continue;
+    }
+    break;
+  }
+
+  if (Array.isArray(output.files)) output.count = output.files.length;
+  else if (Array.isArray(output.partners)) output.count = output.partners.length;
+  if (jsonLength(output) <= CHARACTER_LIMIT) return output;
+
+  const firstAssessment = Array.isArray(output.assessments) ? output.assessments[0] : undefined;
+  return {
+    ...(typeof output.action === "string" ? { action: output.action } : {}),
+    ...(firstAssessment ? { assessments: [firstAssessment] } : {}),
+    truncated: true,
+    omitted: Math.max(1, Number(output.omitted) || 0),
+    characterLimit: CHARACTER_LIMIT,
+  };
+}
+
+function summarizeFramework(ws: NormalizedWorkspace): Record<string, string | number | boolean> | null {
+  if (!ws.frameworkManifest) return null;
+  const entries = Object.entries(ws.frameworkManifest).filter(
+    (entry): entry is [string, string | number | boolean] =>
+      typeof entry[1] === "string" || typeof entry[1] === "number" || typeof entry[1] === "boolean",
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
+/**
+ * Verify options for deriveTier, only when opt-in verify mode is on (HAC-111 R-V2).
+ * cwd is the workspace file's directory so the read-only git whitelist runs inside
+ * the repo. Undefined => OBSERVED-at-most (no live re-run).
+ */
+function verifyOpts(ws: NormalizedWorkspace): { verify: true; cwd: string } | undefined {
+  return isVerifyEnabled() ? { verify: true, cwd: dirname(ws.sourcePath) } : undefined;
 }
 
 const PathInput = z
@@ -91,7 +241,7 @@ Returns fragile:false with empty partners when the file has no recorded history 
         const fragile = findFragile(ws, path);
         const partners = findCoChangePartners(ws, path);
         const indexed = isIndexed(ws, path);
-        const tier = fragile ? deriveTier(fragile.evidence) : null;
+        const tier = fragile ? deriveTier(fragile.evidence, verifyOpts(ws)) : null;
         const assessment = decideEnforcement({
           path,
           fragile: Boolean(fragile),
@@ -140,7 +290,7 @@ Returns fragile:false with empty partners when the file has no recorded history 
 
         return {
           content: [{ type: "text", text: truncate(lines.join("\n")) }],
-          structuredContent: output,
+          structuredContent: boundStructured(output),
         };
       }),
   );
@@ -182,7 +332,7 @@ Returns an empty partners array when none are recorded (a real answer, not an er
               ),
             },
           ],
-          structuredContent: output,
+          structuredContent: boundStructured(output),
         };
       }),
   );
@@ -203,6 +353,7 @@ Returns JSON:
     "count": number,
     "total": number,
     "workspaceVersion": string | null,
+    "framework": Record<string, string | number | boolean> | null,
     "files": [{ "path": string, "reason"?: string, "score"?: number }]
   }`,
       inputSchema: z
@@ -232,6 +383,7 @@ Returns JSON:
           count: sliced.length,
           total: ws.fragileFiles.length,
           workspaceVersion: ws.version ?? null,
+          framework: summarizeFramework(ws),
           files: sliced.map((f) => ({
             path: f.path,
             ...(f.reason ? { reason: f.reason } : {}),
@@ -245,7 +397,7 @@ Returns JSON:
           : "No fragile files recorded in this workspace.";
         return {
           content: [{ type: "text", text: truncate(text) }],
-          structuredContent: output,
+          structuredContent: boundStructured(output),
         };
       }),
   );
@@ -288,7 +440,7 @@ Returns JSON:
         const ws = await loadWorkspace();
         const assessments = paths.map((p) => {
           const fragile = findFragile(ws, p);
-          const tier = fragile ? deriveTier(fragile.evidence) : null;
+          const tier = fragile ? deriveTier(fragile.evidence, verifyOpts(ws)) : null;
           return decideEnforcement({
             path: p,
             fragile: Boolean(fragile),
@@ -312,7 +464,7 @@ Returns JSON:
             : "Changeset action: NONE. No recorded risk history for any touched file. Absence of history is not evidence of safety.";
         return {
           content: [{ type: "text", text: truncate(text) }],
-          structuredContent: output,
+          structuredContent: boundStructured(output),
         };
       }),
   );

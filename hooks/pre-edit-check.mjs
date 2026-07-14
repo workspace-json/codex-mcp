@@ -30,6 +30,7 @@ const dist = (p) => resolve(here, "..", "dist", p);
 
 const { loadWorkspace, findFragile, findCoChangePartners } = await import(dist("services/workspace.js"));
 const { deriveTier, decideEnforcement, aggregateAction } = await import(dist("evidence.js"));
+const { isVerifyEnabled } = await import(dist("config.js"));
 
 // ---------------------------------------------------------------------------
 // Patch parsing: extract touched paths from an apply_patch envelope or a
@@ -88,6 +89,12 @@ function emitDecision(action, messages) {
   process.exit(0); // no recorded history — silent, never an approval message
 }
 
+function emitUnavailable(detail) {
+  emitDecision("warn", [
+    `Workspace intelligence unavailable: ${detail}. The edit may proceed, but no fragility or co-change determination was made. Check WORKSPACE_JSON_PATH / WORKSPACE_JSON_ROOT and validate the artifact with \`npx @workspacejson/spec validate <file>\`.`,
+  ]);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -100,23 +107,28 @@ async function readStdin() {
 
 async function main() {
   let paths = [];
+  // VERIFIED is opt-in and CLI/CI-only. The Codex hot path (stdin event) NEVER
+  // verifies — re-running git per edit is a latency machine (HAC-111 R-V3).
+  let verify = false;
   const argv = process.argv.slice(2);
 
   if (argv[0] === "--paths") {
-    paths = argv.slice(1);
+    verify = isVerifyEnabled(process.env, argv);
+    paths = argv.slice(1).filter((p) => p !== "--verify");
   } else if (argv[0] === "--paths-stdin") {
+    verify = isVerifyEnabled(process.env, argv);
     paths = (await readStdin())
       .split("\n")
       .map((s) => s.trim())
       .filter(Boolean);
   } else {
-    // Hook mode: Codex sends the event JSON on stdin.
+    // Hook mode: Codex sends the event JSON on stdin. Verify stays OFF here.
     const raw = await readStdin();
     let event;
     try {
       event = JSON.parse(raw);
     } catch {
-      process.exit(0); // unparseable event: stay out of the way, never fabricate
+      emitUnavailable("the PreToolUse event was not valid JSON");
     }
     const patch = event?.tool_input?.command ?? event?.tool_input?.patch ?? event?.tool_input?.input ?? "";
     paths = extractTouchedPaths(patch);
@@ -126,18 +138,22 @@ async function main() {
     emitDecision("deny", ["WJSON_DENY_ALL smoke check: hook wiring verified."]);
   }
 
-  if (paths.length === 0) process.exit(0);
+  if (paths.length === 0) {
+    emitUnavailable("no touched file paths could be extracted from the supported apply_patch or unified-diff input");
+  }
 
   let ws;
   try {
     ws = await loadWorkspace();
-  } catch {
-    process.exit(0); // no workspace.json: no intelligence, no opinion, no block
+  } catch (error) {
+    emitUnavailable(error instanceof Error ? error.message : String(error));
   }
 
   const assessments = paths.map((p) => {
     const fragile = findFragile(ws, p);
-    const tier = fragile ? deriveTier(fragile.evidence) : null;
+    const tier = fragile
+      ? deriveTier(fragile.evidence, verify ? { verify: true, cwd: dirname(ws.sourcePath) } : undefined)
+      : null;
     return decideEnforcement({
       path: p,
       fragile: Boolean(fragile),
@@ -154,4 +170,6 @@ async function main() {
   emitDecision(action, messages);
 }
 
-main().catch(() => process.exit(0)); // hook must never crash the edit loop
+main().catch((error) => {
+  emitUnavailable(`the hook failed unexpectedly (${error instanceof Error ? error.message : String(error)})`);
+});

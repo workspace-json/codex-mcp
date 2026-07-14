@@ -30,11 +30,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Run unit tests
-        run: npm run test
-
       - name: Build
         run: npm run build
+
+      - name: Run unit tests
+        run: npm run test
 
       - name: Run smoke tests
         run: npm run smoke
@@ -45,4 +45,7 @@ jobs:
       - name: Ensure package contains plugin assets
         run: |
           npm pack --dry-run 2>&1 | tee pack.log
-          grep -E '(\.mcp\.json|\.codex-plugin/|hooks/)' pack.log
+          grep -F '.mcp.json' pack.log
+          grep -F '.codex-plugin/' pack.log
+          grep -F '.codex/agents/' pack.log
+          grep -F 'hooks/' pack.log

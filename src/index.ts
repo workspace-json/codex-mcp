@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { isVerifyEnabled } from "./config.js";
 import { SERVER_INSTRUCTIONS } from "./constants.js";
 import { registerWorkspaceTools } from "./tools/workspace.js";
 
@@ -37,11 +38,14 @@ async function main(): Promise<void> {
         "Environment:",
         "  WORKSPACE_JSON_PATH   Explicit path to a workspace.json file.",
         "  WORKSPACE_JSON_ROOT   Root dir to search (default: cwd).",
+        "  WJSON_VERIFY=1        Opt in to the VERIFIED tier: re-run recorded read-only",
+        "                        git commands to confirm evidence reproduces. Off by",
+        "                        default; CLI/CI-time only (never on the hook hot path).",
         "",
         "Codex config (.codex/config.toml):",
         "  [mcp_servers.workspacejson]",
         '  command = "npx"',
-        '  args = ["-y", "@workspacejson/codex-mcp"]',
+        '  args = ["-y", "@workspacejson/codex-mcp", "server"]',
         "",
       ].join("\n"),
     );
@@ -52,7 +56,7 @@ async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // stderr is safe for logging on stdio transports; stdout carries the protocol.
-  console.error(`workspacejson-codex-mcp v${VERSION} ready on stdio`);
+  console.error(`workspacejson-codex-mcp v${VERSION} ready on stdio${isVerifyEnabled() ? " (verify mode ON)" : ""}`);
 }
 
 main().catch((error) => {

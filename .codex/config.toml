@@ -1,5 +1,12 @@
 # Project-scoped Codex MCP config. Codex loads this for trusted projects.
 [mcp_servers.workspacejson]
+# workspacejson-codex-mcp managed MCP block
 command = "npx"
-args = ["-y", "@workspacejson/codex-mcp"]
+args = ["-y", "@workspacejson/codex-mcp", "server"]
 # env = { WORKSPACE_JSON_PATH = "/abs/path/.agents/workspace.json" }
+
+[agents.adversarial_reviewer]
+# workspacejson-codex-mcp managed reviewer block
+description = "Read-only GPT-5.6 reviewer for correctness, evidence integrity, and unsupported claims."
+config_file = "./agents/adversarial-reviewer.toml"
+nickname_candidates = ["Aegis", "Argus", "Sentinel"]
