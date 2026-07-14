@@ -22,20 +22,32 @@ const FORBIDDEN_ROOT_FILES = new Set([
 /**
  * Gitignored entries (node_modules/, dist/, *.log, ...) are local build
  * byproducts, not repository structure — the policy shouldn't need to
- * enumerate them. Only consults git when rootDir is actually a checkout
- * (test fixtures under a bare temp dir skip this and rely solely on the
- * always-allowed set, so tests stay deterministic).
+ * enumerate them. One batched `git check-ignore --stdin` call for every
+ * root entry at once, not one spawn per entry: with ~30 root entries the
+ * per-entry version was slow enough to blow past the test runner's default
+ * timeout when run inside the full `npm run check` chain. Only consults
+ * git when rootDir is actually a checkout (test fixtures under a bare temp
+ * dir skip this and rely solely on the always-allowed set, so tests stay
+ * deterministic and fast).
  */
-function isGitIgnored(rootDir, name) {
-  if (!existsSync(join(rootDir, ".git"))) return false;
+function computeIgnoredRootEntries(rootDir, names) {
+  if (!existsSync(join(rootDir, ".git")) || names.length === 0) return new Set();
   try {
-    execFileSync("git", ["check-ignore", "-q", "--", name], {
+    const output = execFileSync("git", ["check-ignore", "--stdin"], {
       cwd: rootDir,
-      stdio: "ignore",
+      input: names.join("\n"),
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "ignore"],
     });
-    return true;
-  } catch {
-    return false;
+    return new Set(output.split("\n").filter(Boolean));
+  } catch (error) {
+    // Exit code 1 means "none of the given paths are ignored" — not an
+    // error condition, just an empty result. Anything git did manage to
+    // print before that (mixed matches) is still valid.
+    if (error && typeof error.stdout === "string") {
+      return new Set(error.stdout.split("\n").filter(Boolean));
+    }
+    return new Set();
   }
 }
 
@@ -47,10 +59,14 @@ function isGitIgnored(rootDir, name) {
 export function checkRepoStructure(rootDir, policy) {
   const violations = [];
   const entries = readdirSync(rootDir, { withFileTypes: true });
+  const ignored = computeIgnoredRootEntries(
+    rootDir,
+    entries.map((entry) => entry.name),
+  );
 
   for (const entry of entries) {
     const name = entry.name;
-    if (ALWAYS_ALLOWED_ROOT_ENTRIES.has(name) || isGitIgnored(rootDir, name)) continue;
+    if (ALWAYS_ALLOWED_ROOT_ENTRIES.has(name) || ignored.has(name)) continue;
 
     if (entry.isDirectory()) {
       if (!policy.allowedRootDirectories.includes(name)) {

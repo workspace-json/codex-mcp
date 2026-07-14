@@ -100,6 +100,17 @@ MCP supplies context. A deterministic hook enforces evidenced omissions. A read-
 
 Full derivation rules for evidence tiers (`ASSERTED`/`OBSERVED`/`VERIFIED`), the hook's fail-open behavior, and the GPT-5.6 reviewer's scope live in [`docs/how-it-works.md`](docs/how-it-works.md).
 
+## Operational guarantees
+
+- Missing evidence never becomes a safety approval.
+- Malformed evidence never crashes the edit loop.
+- Reviewer output never controls deterministic enforcement.
+- Installation never overwrites unmanaged configuration.
+- Uninstall removes only owned artifacts.
+- Every `VERIFIED` claim maps to a reproducible command.
+
+Each is checkable, not asserted: run `npm run verify` from a clean clone to reproduce the gate this repository's own CI runs, or read the source citations in [`docs/operational-guarantees.md`](docs/operational-guarantees.md). See [`docs/failure-modes.md`](docs/failure-modes.md) for the behavior behind each guarantee under missing, malformed, or unavailable input.
+
 ## Trust boundary
 
 Runs locally over stdio and does not upload repository contents. Initial package installation may contact npm.
@@ -116,6 +127,8 @@ Runs locally over stdio and does not upload repository contents. Initial package
 ## Learn more
 
 - [How it works](docs/how-it-works.md) — evidence tiers, hook enforcement, GPT-5.6 reviewer
+- [Operational guarantees](docs/operational-guarantees.md) — the six promises above, with source citations
+- [Failure modes](docs/failure-modes.md) — behavior under missing, malformed, or unavailable input
 - [Tools](docs/tools.md) — full MCP tool reference (`workspace_get_file_context`, `workspace_get_cochange_partners`, `workspace_list_fragile_files`, `workspace_assess_change`)
 - [The workspace.json contract](docs/workspace-contract.md) — fields consumed and normalization
 - [Verification](docs/verification.md) — what's been verified and how

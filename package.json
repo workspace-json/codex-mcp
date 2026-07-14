@@ -57,6 +57,7 @@
     "check:structure": "node scripts/check-repo-structure.mjs",
     "pack:check": "npm pack --dry-run && npx publint",
     "check": "npm run check:structure && npm run typecheck && npm run lint && npm run build && npm run test && npm run smoke",
+    "verify": "npm run check",
     "prepublishOnly": "npm run check && npm run pack:check"
   },
   "engines": {
