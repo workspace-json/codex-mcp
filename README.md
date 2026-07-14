@@ -20,11 +20,21 @@ With `workspace.json`: the hook identifies two evidenced partners and blocks the
 
 Result: Codex revises the changeset before the edit lands.
 
-## Install & wire into Codex
+## Installation
 
-### Option 1: MCP context only
+workspace.json for Codex has three surfaces. Each installs with one command and is testable on its own — no build step, nothing leaves your machine at runtime.
 
-Add the MCP server to Codex (`~/.codex/config.toml` global or `.codex/config.toml` project-scoped):
+### 1. Codex plugin — tools + pre-edit enforcement (recommended)
+
+One command writes the MCP server and the pre-edit hook into your Codex config:
+
+```bash
+npx @workspacejson/codex-mcp install --with-hook
+```
+
+This is idempotent (safe to re-run) and stays scoped to the current repo's `.codex/` directory: it writes the MCP and hook blocks into `.codex/config.toml`, the reviewer config into `.codex/agents/`, and a stable runtime copy into `.codex/workspacejson-codex-mcp/`. It never touches `~/.codex`. Restart Codex, then run `/mcp` in the TUI to confirm `workspacejson` is connected.
+
+Prefer to wire it yourself? Add this to `.codex/config.toml` (project) or `~/.codex/config.toml` (global):
 
 ```toml
 [mcp_servers.workspacejson]
@@ -34,42 +44,81 @@ args = ["-y", "@workspacejson/codex-mcp", "server"]
 # env = { WORKSPACE_JSON_PATH = "/abs/path/.agents/workspace.json" }
 ```
 
-Restart Codex, then run `/mcp` in the TUI to confirm the server is connected. The server ships standing guidance in its MCP `instructions`; you can reinforce it in `AGENTS.md`:
+The plugin bundles a `PreToolUse` hook that checks the change before an edit lands; the `--with-hook` installer writes that stanza for you. Without the hook you still get the read tools, but not deterministic enforcement.
 
-```md
-Before editing or creating a file, call workspace_get_file_context on the target
-path to check fragility and co-change partners.
-```
-
-### Option 2: Full Codex plugin — MCP + deterministic hook
-
-For deterministic enforcement, run the installer from the repo root:
+To remove only the ownership-marked MCP, hook, reviewer, and stable runtime copy this installer wrote, leaving unrelated Codex settings untouched:
 
 ```bash
-npx -y @workspacejson/codex-mcp install --with-hook
-# or, if you have the repo cloned:
-node scripts/install.mjs --with-hook
+npx @workspacejson/codex-mcp uninstall
 ```
 
-This writes ownership-marked MCP, reviewer, and `PreToolUse` hook blocks into `.codex/config.toml`, installs a stable hook/runtime copy under `.codex/workspacejson-codex-mcp/`, and registers the read-only GPT-5.6 adversarial reviewer under `.codex/agents/`. Re-running is idempotent. If same-name configuration or reviewer files already exist without this installer's markers, installation stops instead of overwriting them.
+### 2. CI / repo-native check — no editor required
 
-Remove only the ownership-marked MCP, hook, reviewer, and stable runtime copy while preserving unrelated or colliding unmanaged Codex settings:
+The same logic runs as a plain command, so it works in CI or from any shell:
 
 ```bash
-npx -y @workspacejson/codex-mcp uninstall
+git diff --name-only | npx @workspacejson/codex-mcp check --paths-stdin
 ```
 
-You can also copy the bundled plugin assets manually into a Codex plugin directory:
+Exit code 2 means a fragile change is missing a co-change partner; the reason prints with its evidence. Drop it into a GitHub Action to gate pull requests the same way the hook gates edits.
+
+### 3. Editor decorations — VS Code / Cursor (optional)
+
+Install the packaged extension from the release `.vsix`:
 
 ```bash
-cp -r node_modules/@workspacejson/codex-mcp/.codex-plugin ~/.codex/plugins/workspace-json
-cp -r node_modules/@workspacejson/codex-mcp/hooks ~/.codex/plugins/workspace-json/
-cp node_modules/@workspacejson/codex-mcp/.mcp.json ~/.codex/plugins/workspace-json/
-mkdir -p .codex/agents
-cp node_modules/@workspacejson/codex-mcp/.codex/agents/adversarial-reviewer.toml .codex/agents/
+# VS Code
+code --install-extension workspacejson-codex-<version>.vsix
+
+# Cursor
+cursor --install-extension workspacejson-codex-<version>.vsix
 ```
 
-The exact Codex plugin path depends on your Codex version and platform; the plugin manifest (`plugin.json`) references `./hooks/hooks.json` and `./.mcp.json` relative to the plugin root. The hook in `hooks/pre-edit-check.mjs` is the same file used for repo-native fallback and CI.
+Fragile files are flagged in the Explorer with their tier and evidence on hover. The extension reads the same local `.agents/workspace.json`; it makes no network calls.
+
+### Verify in two minutes
+
+From a repo that has a committed `.agents/workspace.json`:
+
+1. In Codex, ask it to edit a file the workspace flags as fragile.
+2. Watch the hook refuse the patch, citing the recorded evidence and the co-change partner the change left out.
+3. Ask Codex to include the partner and retry — the edit proceeds.
+
+No configuration beyond step 1 above. The `example/` fixture in this repo reproduces the exact denial shown in the demo.
+
+<!--
+==========================================================================
+INTERNAL — REMOVE BEFORE SHIP. Gate dependencies for each command above:
+
+Path 1:
+  - `npx @workspacejson/codex-mcp ...` requires the package PUBLISHED to npm
+    (release gate). Until published, judges use a local clone: swap `npx ...`
+    for `node ./dist/index.js server` and run `node scripts/install.mjs
+    --with-hook`.
+  - `install --with-hook` = HAC-91 R-C5-1/R-C5-2. Must be idempotent (clobber
+    guard) and must NOT run on connect (see HAC-129 — the committed config's
+    server arg is the fix).
+  - The manual config's `"server"` arg is HAC-129's fix. Do NOT ship the
+    args without it or opening the repo launches the installer.
+
+Path 2:
+  - `check --paths-stdin` = the hook's CLI mode (HAC-90 / hooks/pre-edit-check.mjs
+    already supports --paths-stdin). Confirm the bin exposes `check` as a
+    subcommand, or document `node hooks/pre-edit-check.mjs --paths-stdin`.
+
+Path 3:
+  - The .vsix does not exist yet (HAC-136 R-9, CONDITIONAL — build only if the
+    P0 trio + subagent land with buffer). If the extension is cut, delete this
+    entire section 3 and the "decorations" line from Verify.
+  - <version> filename is set by the extension package.json.
+
+Verify block:
+  - The "watch it refuse / cite evidence" flow depends on the frozen fixture
+    (HAC-96) and captured behavior (HAC-98). Do not publish the exact cited
+    strings until those are green; keep this description behavioral, not
+    quoting a specific SHA, until frozen.
+==========================================================================
+-->
 
 ## Evidence tiers (the part that is different)
 
