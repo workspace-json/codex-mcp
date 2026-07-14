@@ -11,3 +11,6 @@ demo/
 # Local browser-automation state and one-off capture; never product assets.
 .playwright-mcp/
 hac120-desktop.png
+
+# Local Claude state is machine-specific, not product source.
+.claude/
