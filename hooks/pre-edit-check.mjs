@@ -89,6 +89,12 @@ function emitDecision(action, messages) {
   process.exit(0); // no recorded history — silent, never an approval message
 }
 
+function emitUnavailable(detail) {
+  emitDecision("warn", [
+    `Workspace intelligence unavailable: ${detail}. The edit may proceed, but no fragility or co-change determination was made. Check WORKSPACE_JSON_PATH / WORKSPACE_JSON_ROOT and validate the artifact with \`npx @workspacejson/spec validate <file>\`.`,
+  ]);
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -122,7 +128,7 @@ async function main() {
     try {
       event = JSON.parse(raw);
     } catch {
-      process.exit(0); // unparseable event: stay out of the way, never fabricate
+      emitUnavailable("the PreToolUse event was not valid JSON");
     }
     const patch = event?.tool_input?.command ?? event?.tool_input?.patch ?? event?.tool_input?.input ?? "";
     paths = extractTouchedPaths(patch);
@@ -132,13 +138,15 @@ async function main() {
     emitDecision("deny", ["WJSON_DENY_ALL smoke check: hook wiring verified."]);
   }
 
-  if (paths.length === 0) process.exit(0);
+  if (paths.length === 0) {
+    emitUnavailable("no touched file paths could be extracted from the supported apply_patch or unified-diff input");
+  }
 
   let ws;
   try {
     ws = await loadWorkspace();
-  } catch {
-    process.exit(0); // no workspace.json: no intelligence, no opinion, no block
+  } catch (error) {
+    emitUnavailable(error instanceof Error ? error.message : String(error));
   }
 
   const assessments = paths.map((p) => {
@@ -162,4 +170,6 @@ async function main() {
   emitDecision(action, messages);
 }
 
-main().catch(() => process.exit(0)); // hook must never crash the edit loop
+main().catch((error) => {
+  emitUnavailable(`the hook failed unexpectedly (${error instanceof Error ? error.message : String(error)})`);
+});

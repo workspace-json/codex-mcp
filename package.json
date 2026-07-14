@@ -33,7 +33,16 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "hooks", "scripts/install.mjs", ".codex-plugin", ".mcp.json", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "hooks",
+    "scripts/install.mjs",
+    ".codex-plugin",
+    ".codex/agents",
+    ".mcp.json",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
