@@ -40,6 +40,6 @@ minimal change and do not represent the missing result as a safety signal.
 
 ## Handoff
 
-Append to `STATUS.md` with the issue, starting and ending commits, exact files,
+Append to `docs/project/status.md` with the issue, starting and ending commits, exact files,
 commands and observed results, unresolved risks, and the next issue unblocked.
 Handoffs without reproducible command output are incomplete.

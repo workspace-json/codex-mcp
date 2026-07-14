@@ -1,0 +1,33 @@
+{
+  "description": "Root-level allowlist enforced by scripts/check-repo-structure.mjs. Edit this file to add a new legitimate root entry; do not weaken the checker script to work around it.",
+  "allowedRootFiles": [
+    "README.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "LICENSE",
+    "package.json",
+    "package-lock.json",
+    "tsconfig.json",
+    "biome.json",
+    ".gitignore",
+    ".mcp.json",
+    ".nvmrc"
+  ],
+  "allowedRootDirectories": [
+    ".agents",
+    ".claude",
+    ".codex",
+    ".codex-plugin",
+    ".github",
+    "assets",
+    "config",
+    "docs",
+    "fixture",
+    "hooks",
+    "scripts",
+    "src",
+    "tests"
+  ]
+}

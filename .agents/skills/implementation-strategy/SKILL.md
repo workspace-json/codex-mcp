@@ -16,8 +16,8 @@ missing, label it unavailable instead of guessing.
 
 ## Workflow
 
-1. Read `AGENTS.md`, `PLAN.md`, `RUNBOOK.md`, the assigned issue, its relations,
-   and the execution graph.
+1. Read `AGENTS.md`, `docs/project/plan.md`, `docs/project/runbook.md`, the
+   assigned issue, its relations, and the execution graph.
 2. Confirm one issue per worktree and record the starting commit.
 3. Call `workspace_get_file_context` for every candidate target. Record missing
    tool/results as unavailable; never interpret them as approval.
