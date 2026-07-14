@@ -20,6 +20,13 @@ minimal change and do not represent the missing result as a safety signal.
 
 ## Evidence and review contract
 
+- Use `$implementation-strategy` before changing runtime behavior, hooks, MCP
+  outputs, installer behavior, package exports, or public contracts.
+- Use `$code-change-verification` after code, test, package, install, hook, or
+  build changes.
+- Use `$docs-claim-sync` before changing public documentation or claims.
+- Use `$release-candidate-review` after release-candidate freeze and before the
+  HAC-124 judge-journey review.
 - Never claim a change is safe. Missing or malformed workspace intelligence is
   `unknown` or `unavailable`, not approval.
 - `ASSERTED`, `OBSERVED`, and `VERIFIED` are derived from evidence; never accept a

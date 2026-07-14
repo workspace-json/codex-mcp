@@ -1,0 +1,4 @@
+interface:
+  display_name: "Code Change Verification"
+  short_description: "Verify code, packaging, install, and hook changes"
+  default_prompt: "Use $code-change-verification to verify this completed code or packaging change."
