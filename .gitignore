@@ -2,5 +2,5 @@ node_modules/
 dist/
 *.log
 .DS_Store
-demo/narration/output/*
-!demo/narration/output/.gitkeep
+# Keep local narration sources, voices, and generated production assets out of this public repository.
+demo/
