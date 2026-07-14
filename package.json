@@ -55,7 +55,7 @@
     "test:watch": "vitest",
     "smoke": "node scripts/smoke.mjs",
     "pack:check": "npm pack --dry-run && npx publint",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build && npm run smoke",
+    "check": "npm run typecheck && npm run lint && npm run build && npm run test && npm run smoke",
     "prepublishOnly": "npm run check && npm run pack:check"
   },
   "engines": {
