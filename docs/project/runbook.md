@@ -2,8 +2,8 @@
 
 ## Start
 
-1. Read `AGENTS.md`, `PLAN.md`, and the assigned Linear issue and blockers.
-2. Confirm a clean worktree and record `git rev-parse HEAD` in `STATUS.md`.
+1. Read `AGENTS.md`, `docs/project/plan.md`, and the assigned Linear issue and blockers.
+2. Confirm a clean worktree and record `git rev-parse HEAD` in `docs/project/status.md`.
 3. Create or select one issue-specific branch/worktree.
 4. Declare allowed and forbidden files. Serialize shared-file changes.
 5. Run `workspace_get_file_context` for every target path before mutation.
@@ -26,8 +26,8 @@
 ## Commit and handoff
 
 1. Commit only the assigned scope with an issue-oriented message.
-2. Append `STATUS.md` with commits, files, commands/results, risks, and the next
-   issue unblocked.
+2. Append `docs/project/status.md` with commits, files, commands/results, risks,
+   and the next issue unblocked.
 3. For implementation PRs, request `@codex review`. Critical-path PRs also receive
    a second GPT-5.6 high-reasoning adversarial review.
 4. Rebase or merge shared-file work serially; rerun the publish gate afterward.

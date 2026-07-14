@@ -119,7 +119,7 @@ Runs locally over stdio and does not upload repository contents. Initial package
 - [Tools](docs/tools.md) — full MCP tool reference (`workspace_get_file_context`, `workspace_get_cochange_partners`, `workspace_list_fragile_files`, `workspace_assess_change`)
 - [The workspace.json contract](docs/workspace-contract.md) — fields consumed and normalization
 - [Verification](docs/verification.md) — what's been verified and how
-- [Build Week disclosure](docs/build-week.md) — what was authored in-window
+- [Build Week disclosure](docs/submission/build-week.md) — what was authored in-window
 - [Development](docs/development.md) — build, test, and smoke-suite commands
 - [Clean-install audit](docs/clean-install-audit.md) · [Fixture verification](docs/fixture-verification.md)
 

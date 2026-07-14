@@ -28,6 +28,9 @@ jobs:
         continue-on-error: true
         run: npm audit --audit-level=high
 
+      - name: Check repository structure
+        run: npm run check:structure
+
       - name: Typecheck
         run: npm run typecheck
 
