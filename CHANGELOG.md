@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Package metadata: repository, homepage, bugs, and keywords.
 - README sections: "See it in 30 seconds", "Option 1: MCP context only", "Option 2: Full Codex plugin", and "Current limitations".
 - Project-scoped, read-only GPT-5.6 adversarial reviewer and installer wiring.
-- Repository execution harness (`AGENTS.md`, `PLAN.md`, `RUNBOOK.md`, `STATUS.md`).
+- Repository execution guidance and a tracked Build Week runbook.
 - Structured-response bounding with deny-preservation regression coverage.
 - Explicit fail-open warnings for missing, malformed, and unparseable workspace intelligence.
 

@@ -4,3 +4,10 @@ dist/
 .DS_Store
 # Keep local narration sources, voices, and generated production assets out of this public repository.
 demo/
+
+# Local solo-work coordination notes; never part of the product artifact.
+.local/
+
+# Local browser-automation state and one-off capture; never product assets.
+.playwright-mcp/
+hac120-desktop.png
