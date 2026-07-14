@@ -110,3 +110,57 @@ Append-only implementation log. Claims below are backed by the recorded commands
   the issue-scoped commit receives a green run against the correct base.
 - Next issue unblocked: HAC-158 can proceed independently; HAC-120/121/122 remain
   limited to preparatory work until HAC-96/HAC-98 external evidence exists.
+
+## 2026-07-13 — HAC-158 repository-local skills
+
+- Issue: HAC-158. Starting commit: `17588dd`; implementation commit: `7d0ef98`.
+- Dedicated worktree: `/private/tmp/workspacejson-hac158`; branch:
+  `feature/hac-158-repository-skills`.
+- Allowed files: `.agents/skills/**`, `AGENTS.md`, and append-only `STATUS.md`.
+  No runtime, package, lockfile, CI, hook, README, evidence, fixture, or public-claim
+  files changed.
+- Implementation files: `AGENTS.md` plus `SKILL.md` and `agents/openai.yaml` for
+  `implementation-strategy`, `code-change-verification`, `docs-claim-sync`, and
+  `release-candidate-review` under `.agents/skills/`.
+- Workspace intelligence: `workspace_get_file_context` was unavailable in this
+  session. Fragility and co-change context for all target files is unavailable and
+  was not treated as approval.
+- Structural validation: ran the skill-creator `quick_validate.py` separately for
+  all four skill directories; each returned `Skill is valid!`. `rg` found no
+  remaining scaffold TODO or malformed default prompt.
+- Forward tests: fresh Codex sessions selected the implementation, verification,
+  claim-sync, and release-review workflows from repository guidance. A controlled
+  required check exiting 23 produced overall `FAIL`; synthetic copy claiming five
+  tools and guaranteed safety produced a pre-edit drift report; a 25-file packed
+  artifact with SHA-256
+  `96586e05443f8808a7af4d6826f9adf734ec7743ab98ba0774350530b4acb699`
+  was rejected at the HAC-124 entry gate because the claim matrix and HAC-98 packet
+  are unavailable.
+- Skill iteration: the synthetic drift test exposed an ambiguous tier inference.
+  `docs-claim-sync` now states that contracts and documentation are claims, not
+  evidence records; without underlying evidence the tier remains `ASSERTED`.
+- Clean dependency command:
+  `npm_config_cache=/tmp/workspacejson-codex-mcp-npm-cache npm ci`. The first
+  sandboxed attempt ended with an npm internal exit-handler error; the approved
+  rerun completed, added 153 packages, audited 154, and found 0 vulnerabilities.
+- Clean publish-gate command:
+  `npm_config_cache=/tmp/workspacejson-codex-mcp-npm-cache npm run prepublishOnly`.
+  Observed result: failed 1 of 69 tests because installer tests require `dist/`
+  before the script's build step (`ENOENT .../dist`). This is a pre-existing
+  `17588dd` ordering defect outside HAC-158's allowed files.
+- Follow-up validation: `npm run build &&
+  npm_config_cache=/tmp/workspacejson-codex-mcp-npm-cache npm run prepublishOnly`
+  passed typecheck/Biome, all 69 tests, smoke `ALL GREEN`, the 25-file package
+  dry-run, and publint `All good!`. This does not erase the clean-checkout failure.
+- Diff checks: cached `git diff --check` passed; implementation scope was 249
+  insertions in 9 files.
+- Final GPT-5.6 Sol/high review session
+  `019f5e62-ff62-7e82-8505-10b6df83abab` returned `VERDICT: PASS` for the HAC-158
+  skill changes and kept the clean-publish defect as an independent blocker.
+- Unresolved risks: do not mark HAC-158 Done until the clean-checkout publish gate
+  is resolved or explicitly accepted and the full release-candidate skill is run
+  after the claim matrix/HAC-98 packet exist. The skills add workflow guidance;
+  deterministic hooks and CI remain the enforcement backstops.
+- Next work: safe preparatory portions of HAC-120/121/122 may proceed, but final
+  screenshots, VERIFIED wording, recording, and submission assets remain blocked
+  by HAC-96/HAC-98 and human claim approval.
