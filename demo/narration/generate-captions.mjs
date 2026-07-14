@@ -39,5 +39,5 @@ const vtt = `WEBVTT\n\n${captions.map((caption) => `${formatTime(caption.startMs
 await writeFile(resolve(outputDir, "narration.srt"), srt);
 await writeFile(resolve(outputDir, "narration.vtt"), vtt);
 console.log(
-  `Wrote ${captions.length} sentence-level captions. They cover audio through ${formatTime(timing.totalDurationMs, ".")}.`,
+  `Wrote ${captions.length} sentence-level captions. Spoken captions end at ${formatTime(captions.at(-1).endMs, ".")}; track duration is ${formatTime(timing.totalDurationMs, ".")}.`,
 );

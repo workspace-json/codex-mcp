@@ -9,7 +9,7 @@
     "similarity_boost": 0.75,
     "style": 0,
     "use_speaker_boost": true,
-    "speed": 0.96
+    "speed": 1.0
   },
   "notes": "Draft configuration only. ELEVENLABS_VOICE_ID is supplied through the environment and must identify a voice you are authorized to use. Direct HTTP is used against the current ElevenLabs TTS stream endpoint so no SDK dependency is needed."
 }

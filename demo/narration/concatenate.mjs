@@ -26,14 +26,17 @@ const probe = (file) => {
 };
 const inputs = [];
 const labels = [];
-manifest.segments.forEach((segment, index) => {
+let inputIndex = 0;
+for (const segment of manifest.segments) {
   inputs.push("-i", resolve(outputDir, segment.filename));
-  labels.push(`[${index}:a]`);
+  labels.push(`[${inputIndex}:a]`);
+  inputIndex += 1;
   if (segment.postRollMs > 0) {
     inputs.push("-f", "lavfi", "-t", String(segment.postRollMs / 1000), "-i", "anullsrc=r=44100:cl=mono");
-    labels.push(`[${inputs.filter((value) => value === "-i").length - 1}:a]`);
+    labels.push(`[${inputIndex}:a]`);
+    inputIndex += 1;
   }
-});
+}
 const filter = `${labels.join("")}concat=n=${labels.length}:v=0:a=1[a]`;
 const wavPath = resolve(outputDir, "narration.wav");
 const mp3Path = resolve(outputDir, "narration.mp3");
