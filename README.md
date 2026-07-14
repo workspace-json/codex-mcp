@@ -1,5 +1,11 @@
 # workspace.json for Codex
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/workspace-json-codex-lockup-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="assets/workspace-json-codex-lockup-light.png">
+  <img alt="workspace.json / Codex" src="assets/workspace-json-codex-lockup-dark.png" width="480">
+</picture>
+
 `@workspacejson/codex-mcp`
 
 [![CI](https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml)

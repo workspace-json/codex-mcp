@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="design_doc_mode" content="canvas">
+<title>workspace.json / Codex — Brand Lockup</title>
+<link rel="stylesheet" href="_ds/workspace-json-design-system-b8d83ce8-fa46-4b07-8519-19c3ef0a739e/tokens/fonts.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #e9edeb; font-family: "Plus Jakarta Sans", sans-serif; }
+
+  .frame {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .frame-label {
+    position: absolute;
+    font-family: "Geist Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b7c76;
+  }
+
+  .wordmark {
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    white-space: nowrap;
+  }
+  .json-suffix { color: #00c896; }
+  .slash { color: #00c896; font-weight: 500; }
+  .codex { font-weight: 500; }
+  .tagline {
+    font-family: "Geist Mono", monospace;
+    text-transform: uppercase;
+  }
+
+  /* ---- 1. Dark horizontal ---- */
+  #dark-lockup {
+    top: 0; left: 0;
+    width: 1600px; height: 500px;
+    background: #07100e;
+    align-items: center;
+    justify-content: center;
+  }
+  #dark-lockup .lockup-inner { display: flex; flex-direction: column; align-items: flex-start; gap: 22px; padding: 0 90px; }
+  #dark-lockup .wordmark { font-size: 66px; color: #f5faf8; }
+  #dark-lockup .tagline { font-size: 14px; color: #5d7a70; letter-spacing: 0.28em; margin-left: 4px; }
+
+  /* ---- 2. Light horizontal ---- */
+  #light-lockup {
+    top: 0; left: 1700px;
+    width: 1600px; height: 500px;
+    background: #fbfdfc;
+    align-items: center;
+    justify-content: center;
+  }
+  #light-lockup .lockup-inner { display: flex; flex-direction: column; align-items: flex-start; gap: 22px; padding: 0 90px; }
+  #light-lockup .wordmark { font-size: 66px; color: #0d1f1a; }
+  #light-lockup .json-suffix { color: #008667; }
+  #light-lockup .slash { color: #008667; }
+  #light-lockup .tagline { font-size: 14px; color: #76968b; letter-spacing: 0.28em; margin-left: 4px; }
+
+  /* ---- 3. Compact square mark ---- */
+  #square-mark {
+    top: 600px; left: 0;
+    width: 600px; height: 600px;
+    background: #07100e;
+    align-items: center;
+    justify-content: center;
+  }
+  #square-mark .mark { font-family: "Plus Jakarta Sans", sans-serif; font-weight: 800; font-size: 62px; letter-spacing: -0.02em; color: #f5faf8; display: flex; align-items: baseline; }
+  #square-mark .mark .dot { color: #00c896; }
+  #square-mark .mark .slash { color: #00c896; font-weight: 400; margin: 0 6px; font-size: 54px; }
+  #square-mark .mark .c { color: #f5faf8; }
+  #square-mark .baseline-rule { width: 64px; height: 3px; background: #00c896; margin-top: 26px; }
+
+  /* ---- 4. OG composition ---- */
+  #og {
+    top: 600px; left: 700px;
+    width: 1200px; height: 630px;
+    background: #07100e;
+    align-items: center;
+    justify-content: center;
+  }
+  #og .lockup-inner { display: flex; flex-direction: column; align-items: flex-start; gap: 24px; padding: 0 90px; }
+  #og .wordmark { font-size: 50px; color: #f5faf8; }
+  #og .tagline { font-size: 13px; color: #5d7a70; letter-spacing: 0.28em; margin-left: 4px; }
+</style>
+</head>
+<body>
+
+<div class="frame-label" style="top: -22px; left: 0;">1 — dark horizontal lockup</div>
+<div class="frame" id="dark-lockup">
+  <div class="lockup-inner">
+    <div class="wordmark">workspace<span class="json-suffix">.json</span> <span class="slash">/</span> <span class="codex">Codex</span></div>
+    <div class="tagline">portable repository intelligence</div>
+  </div>
+</div>
+
+<div class="frame-label" style="top: -22px; left: 1700px;">2 — light horizontal lockup</div>
+<div class="frame" id="light-lockup">
+  <div class="lockup-inner">
+    <div class="wordmark">workspace<span class="json-suffix">.json</span> <span class="slash">/</span> <span class="codex">Codex</span></div>
+    <div class="tagline">portable repository intelligence</div>
+  </div>
+</div>
+
+<div class="frame-label" style="top: 578px; left: 0;">3 — compact square mark</div>
+<div class="frame" id="square-mark">
+  <div style="display:flex; flex-direction:column; align-items:center;">
+    <div class="mark">w<span class="dot">.</span>json <span class="slash">/</span> <span class="c">C</span></div>
+    <div class="baseline-rule"></div>
+  </div>
+</div>
+
+<div class="frame-label" style="top: 578px; left: 700px;">4 — Open Graph composition</div>
+<div class="frame" id="og">
+  <div class="lockup-inner">
+    <div class="wordmark">workspace<span class="json-suffix">.json</span> <span class="slash">/</span> <span class="codex">Codex</span></div>
+    <div class="tagline">portable repository intelligence</div>
+  </div>
+</div>
+
+</body>
+</html>
