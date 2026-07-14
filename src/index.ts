@@ -45,7 +45,7 @@ async function main(): Promise<void> {
         "Codex config (.codex/config.toml):",
         "  [mcp_servers.workspacejson]",
         '  command = "npx"',
-        '  args = ["-y", "@workspacejson/codex-mcp"]',
+        '  args = ["-y", "@workspacejson/codex-mcp", "server"]',
         "",
       ].join("\n"),
     );

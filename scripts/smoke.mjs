@@ -157,8 +157,78 @@ check(
   lf.structuredContent?.total === 3 && lf.structuredContent?.files?.[0]?.path === "src/db/client.ts",
   JSON.stringify(lf.structuredContent?.files?.map((f) => f.path)),
 );
+check(
+  "list_fragile_files surfaces bounded framework context",
+  lf.structuredContent?.framework?.framework === "next" && lf.structuredContent?.framework?.testRunner === "vitest",
+  JSON.stringify(lf.structuredContent?.framework),
+);
 
 await client.close();
+
+// ── HAC-131: both MCP channels stay bounded, including nested structures ──
+const boundRoot = resolve(root, ".smoke-bound");
+mkdirSync(resolve(boundRoot, ".agents"), { recursive: true });
+writeFileSync(
+  resolve(boundRoot, ".agents/workspace.json"),
+  JSON.stringify({
+    manual: {
+      fragileFiles: [
+        {
+          path: "src/huge.ts",
+          reason: "large evidence boundary",
+          evidence: Array.from({ length: 400 }, (_, index) => ({
+            claim: `claim-${index}-${"x".repeat(300)}`,
+          })),
+        },
+        ...Array.from({ length: 299 }, (_, index) => ({
+          path: `src/list-${index}.ts`,
+          reason: "large list boundary ".repeat(8),
+        })),
+      ],
+      coChangePatterns: [["src/huge.ts", ...Array.from({ length: 800 }, (_, index) => `src/partner-${index}.ts`)]],
+    },
+  }),
+);
+const boundTransport = new StdioClientTransport({
+  command: "node",
+  args: [resolve(root, "dist/index.js")],
+  env: { ...process.env, WORKSPACE_JSON_ROOT: boundRoot },
+});
+const boundClient = new Client({ name: "smoke-bound", version: "0.0.0" });
+await boundClient.connect(boundTransport);
+const boundList = await boundClient.callTool({ name: "workspace_list_fragile_files", arguments: { limit: 500 } });
+check(
+  "structured list response is bounded and count remains honest",
+  JSON.stringify(boundList.structuredContent).length <= 12_000 &&
+    boundList.structuredContent?.truncated === true &&
+    boundList.structuredContent?.total === 300 &&
+    boundList.structuredContent?.count === boundList.structuredContent?.files?.length,
+  `size=${JSON.stringify(boundList.structuredContent).length} count=${boundList.structuredContent?.count}`,
+);
+const boundContext = await boundClient.callTool({
+  name: "workspace_get_file_context",
+  arguments: { path: "src/huge.ts" },
+});
+check(
+  "structured file context bounds nested evidence",
+  JSON.stringify(boundContext.structuredContent).length <= 12_000 &&
+    boundContext.structuredContent?.path === "src/huge.ts" &&
+    boundContext.structuredContent?.fragile === true,
+  `size=${JSON.stringify(boundContext.structuredContent).length}`,
+);
+const boundAssess = await boundClient.callTool({
+  name: "workspace_assess_change",
+  arguments: { paths: ["src/huge.ts"] },
+});
+check(
+  "structured assessment preserves deny while bounding missing partners",
+  JSON.stringify(boundAssess.structuredContent).length <= 12_000 &&
+    boundAssess.structuredContent?.action === "deny" &&
+    boundAssess.structuredContent?.assessments?.[0]?.action === "deny",
+  `size=${JSON.stringify(boundAssess.structuredContent).length} action=${boundAssess.structuredContent?.action}`,
+);
+await boundClient.close();
+rmSync(boundRoot, { recursive: true, force: true });
 
 // ── Hook script, driven exactly as Codex would drive it ──
 function runHook(stdinObj, extraEnv = {}) {
@@ -216,10 +286,44 @@ check(
 );
 
 const h4 = runHook({ garbage: true });
-check("hook: unparseable/pathless event stays out of the way", h4.status === 0);
+check(
+  "hook: unparseable/pathless event warns but fails open",
+  h4.status === 0 && /additionalContext/.test(h4.stdout) && /unavailable/i.test(h4.stdout),
+  `status=${h4.status} out=${h4.stdout.slice(0, 120)}`,
+);
 
 const h5 = runHook(patchClean, { WJSON_DENY_ALL: "1" });
 check("hook: WJSON_DENY_ALL wiring probe denies", h5.status === 2 && /deny/.test(h5.stdout));
+
+// ── HAC-130: unavailable intelligence is explicit, never a silent allow ──
+const unavailableRoot = resolve(root, ".smoke-unavailable");
+mkdirSync(resolve(unavailableRoot, ".agents"), { recursive: true });
+writeFileSync(resolve(unavailableRoot, ".agents/workspace.json"), "{not-json");
+const corrupt = runHook(patchClean, { WORKSPACE_JSON_ROOT: unavailableRoot });
+check(
+  "hook: corrupt workspace.json warns and fails open",
+  corrupt.status === 0 &&
+    /additionalContext/.test(corrupt.stdout) &&
+    /Failed to parse workspace\.json/.test(corrupt.stdout),
+  `status=${corrupt.status} out=${corrupt.stdout.slice(0, 160)}`,
+);
+writeFileSync(resolve(unavailableRoot, ".agents/workspace.json"), "[]");
+const invalidRoot = runHook(patchClean, { WORKSPACE_JSON_ROOT: unavailableRoot });
+check(
+  "hook: structurally invalid workspace.json warns and fails open",
+  invalidRoot.status === 0 &&
+    /additionalContext/.test(invalidRoot.stdout) &&
+    /root must be an object/.test(invalidRoot.stdout),
+  `status=${invalidRoot.status} out=${invalidRoot.stdout.slice(0, 160)}`,
+);
+rmSync(resolve(unavailableRoot, ".agents/workspace.json"), { force: true });
+const missing = runHook(patchClean, { WORKSPACE_JSON_ROOT: unavailableRoot });
+check(
+  "hook: missing workspace.json warns and fails open",
+  missing.status === 0 && /additionalContext/.test(missing.stdout) && /No workspace\.json found/.test(missing.stdout),
+  `status=${missing.status} out=${missing.stdout.slice(0, 160)}`,
+);
+rmSync(unavailableRoot, { recursive: true, force: true });
 
 // ── Root-marker walk: run hook from a NESTED directory, no env root ──
 const nested = resolve(fixtureRoot, "packages/deep/nested");

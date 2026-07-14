@@ -1,16 +1,52 @@
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
-import { findCoChangePartners, findFragile, isIndexed, normalizeWorkspace } from "../../src/services/workspace.js";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  findCoChangePartners,
+  findFragile,
+  isIndexed,
+  normalizeWorkspace,
+  resolveWorkspacePath,
+} from "../../src/services/workspace.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturePath = resolve(here, "../../fixture/.agents/workspace.json");
 const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
 
 const sourcePath = resolve(here, "../../fixture/.agents/workspace.json");
+const created: string[] = [];
+
+afterEach(() => {
+  process.env.WORKSPACE_JSON_ROOT = undefined;
+  process.env.WORKSPACE_JSON_PATH = undefined;
+  for (const path of created.splice(0)) rmSync(path, { recursive: true, force: true });
+});
+
+describe("resolveWorkspacePath", () => {
+  it("does not consume an ancestor artifact across the nearest Git boundary", () => {
+    const outer = mkdtempSync(resolve(tmpdir(), "wjson-boundary-"));
+    created.push(outer);
+    mkdirSync(resolve(outer, ".agents"));
+    writeFileSync(resolve(outer, ".agents/workspace.json"), "{}\n");
+    const nestedRepo = resolve(outer, "nested");
+    mkdirSync(resolve(nestedRepo, ".git"), { recursive: true });
+    mkdirSync(resolve(nestedRepo, "packages/deep"), { recursive: true });
+    process.env.WORKSPACE_JSON_ROOT = resolve(nestedRepo, "packages/deep");
+    expect(() => resolveWorkspacePath()).toThrow("No workspace.json found");
+  });
+});
 
 describe("normalizeWorkspace", () => {
+  it.each([null, [], "invalid"])("rejects a structurally invalid root: %j", (raw) => {
+    expect(() => normalizeWorkspace(sourcePath, raw)).toThrow("root must be an object");
+  });
+
+  it.each([{ manual: [] }, { generated: "invalid" }])("rejects malformed consumed sections: %j", (raw) => {
+    expect(() => normalizeWorkspace(sourcePath, raw)).toThrow("must be an object");
+  });
+
   it("normalizes the fixture workspace with generated version and framework manifest", () => {
     const ws = normalizeWorkspace(sourcePath, fixture);
     expect(ws.sourcePath).toBe(sourcePath);
