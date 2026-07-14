@@ -75,3 +75,38 @@ Append-only implementation log. Claims below are backed by the recorded commands
   submission assembly.
 - Closing marker: the commit containing this entry follows baseline `43eb423` and
   the final gate above; Git history is the canonical immutable identifier.
+
+## 2026-07-13 — HAC-114 CI completion
+
+- Issue: HAC-114. Starting commit: `17588dd`; implementation commit: `e422b5f`.
+- Allowed files: `.github/workflows/ci.yml`, `README.md`, and append-only
+  `STATUS.md`; no runtime, package, lockfile, hook, evidence, or fixture files
+  changed.
+- Files changed by the implementation commit: `.github/workflows/ci.yml` and
+  `README.md`. CI now reports `npm audit --audit-level=high` without blocking the
+  matrix, and README carries the CI badge after an observed successful workflow
+  run (`29286355269`).
+- Workspace intelligence: `workspace_get_file_context` was unavailable in this
+  session. Fragility and co-change context for the edited files therefore remains
+  unavailable and was not treated as approval.
+- Issue-specific command:
+  `npm_config_cache=/tmp/workspacejson-codex-mcp-npm-cache npm audit --audit-level=high`.
+  Observed result: `found 0 vulnerabilities`.
+- Publish gate:
+  `npm_config_cache=/tmp/workspacejson-codex-mcp-npm-cache npm run prepublishOnly`.
+  Observed result: typecheck and Biome passed; 69 tests passed; smoke reported
+  `ALL GREEN`; the dry-run package contained 25 files; publint reported
+  `All good!`.
+- Diff checks: `git diff --check` passed; implementation diff was 6 insertions in
+  2 files.
+- Read-only GPT-5.6 Sol/high review returned `VERDICT: PASS` with no findings;
+  session `019f5e4d-e3c2-7833-a820-32ae3d9c61b0`. The verdict was advisory only.
+- Remote handoff: branch `feature/hac-114-ci-audit-badge` was pushed. Draft PR #2
+  was immediately closed because remote `main` does not contain continuation
+  baseline `17588dd`, making the PR show 29 files rather than the issue-scoped two.
+  Recreate the PR only after selecting or integrating the correct baseline.
+- Unresolved risk: the changed workflow has not run in GitHub Actions because the
+  only available PR base has the baseline mismatch. Do not mark HAC-114 Done until
+  the issue-scoped commit receives a green run against the correct base.
+- Next issue unblocked: HAC-158 can proceed independently; HAC-120/121/122 remain
+  limited to preparatory work until HAC-96/HAC-98 external evidence exists.
