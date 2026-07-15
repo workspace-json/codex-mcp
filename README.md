@@ -39,7 +39,9 @@ npx @workspacejson/codex-mcp install --with-hook
 Installs:
 - MCP context
 - deterministic pre-edit hook
-- read-only GPT-5.6 reviewer
+
+Includes:
+- optional, read-only GPT-5.6 API reviewer
 
 Idempotent, scoped to this repo's `.codex/` directory, never touches `~/.codex`. Restart Codex, then run `/mcp` to confirm `workspacejson` is connected. Remove everything it wrote with `npx @workspacejson/codex-mcp uninstall`.
 
@@ -96,7 +98,7 @@ No configuration beyond step 1 above. The `example/` fixture in this repo reprod
 
 ## How it works
 
-MCP supplies context. A deterministic hook enforces evidenced omissions. A read-only GPT-5.6 reviewer challenges the completed change. The reviewer never controls the hook, and a `PASS` verdict is not a safety certification.
+MCP supplies context. A deterministic hook enforces evidenced omissions. An optional, direct read-only GPT-5.6 API review challenges a supplied completed diff and preserves its request/response receipt locally. The reviewer never controls the hook, and a `PASS` verdict is not a safety certification.
 
 Full derivation rules for evidence tiers (`ASSERTED`/`OBSERVED`/`VERIFIED`), the hook's fail-open behavior, and the GPT-5.6 reviewer's scope live in [`docs/how-it-works.md`](docs/how-it-works.md).
 
@@ -113,7 +115,7 @@ Each is checkable, not asserted: run `npm run verify` from a clean clone to repr
 
 ## Trust boundary
 
-Runs locally over stdio and does not upload repository contents. Initial package installation may contact npm.
+The MCP and deterministic hook run locally over stdio and do not upload repository contents. Initial package installation may contact npm. The optional `review` command sends only the diff you explicitly supply to the OpenAI API when `OPENAI_API_KEY` is set; it uses `store: false` and preserves a local request/response receipt. Do not supply diffs containing secrets.
 
 ## Current limitations
 

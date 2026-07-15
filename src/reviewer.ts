@@ -1,0 +1,193 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+export const REVIEWER_MODEL = "gpt-5.6";
+const API_URL = "https://api.openai.com/v1/responses";
+
+export type ReviewerVerdict = "PASS" | "BLOCK";
+export type ReviewerResult =
+  | { status: "UNAVAILABLE"; reason: string; artifactDir?: string }
+  | {
+      status: "COMPLETED";
+      artifactDir: string;
+      verdict: ReviewerVerdict;
+      findings: string[];
+      evidence: string[];
+      checked: string[];
+      gaps: string[];
+    };
+
+type Fetch = typeof fetch;
+
+const schema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["verdict", "findings", "evidence", "checked", "gaps"],
+  properties: {
+    verdict: { type: "string", enum: ["PASS", "BLOCK"] },
+    findings: { type: "array", items: { type: "string" } },
+    evidence: { type: "array", items: { type: "string" } },
+    checked: { type: "array", items: { type: "string" } },
+    gaps: { type: "array", items: { type: "string" } },
+  },
+};
+
+function artifactDirectory(cwd: string, supplied?: string): string {
+  return resolve(cwd, supplied ?? ".local/workspacejson/reviewer", new Date().toISOString().replaceAll(":", "-"));
+}
+
+function extractOutputText(response: unknown): string | undefined {
+  if (!response || typeof response !== "object") return undefined;
+  if (typeof (response as { output_text?: unknown }).output_text === "string")
+    return (response as { output_text: string }).output_text;
+  const output = (response as { output?: unknown }).output;
+  if (!Array.isArray(output)) return undefined;
+  for (const item of output) {
+    if (!item || typeof item !== "object" || !Array.isArray((item as { content?: unknown }).content)) continue;
+    for (const content of (item as { content: unknown[] }).content) {
+      if (content && typeof content === "object" && typeof (content as { text?: unknown }).text === "string")
+        return (content as { text: string }).text;
+    }
+  }
+  return undefined;
+}
+
+function parseVerdict(
+  text: string,
+): Omit<Extract<ReviewerResult, { status: "COMPLETED" }>, "status" | "artifactDir"> | undefined {
+  try {
+    const value = JSON.parse(text) as Partial<Extract<ReviewerResult, { status: "COMPLETED" }>>;
+    if (value.verdict !== "PASS" && value.verdict !== "BLOCK") return undefined;
+    const arrays = [value.findings, value.evidence, value.checked, value.gaps];
+    if (!arrays.every((items) => Array.isArray(items) && items.every((entry) => typeof entry === "string")))
+      return undefined;
+    const [findings, evidence, checked, gaps] = arrays as string[][];
+    return { verdict: value.verdict, findings, evidence, checked, gaps };
+  } catch {
+    return undefined;
+  }
+}
+
+export async function reviewDiff(options: {
+  diff: string;
+  cwd?: string;
+  evidenceDir?: string;
+  apiKey?: string;
+  fetchFn?: Fetch;
+}): Promise<ReviewerResult> {
+  const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
+  if (!apiKey)
+    return { status: "UNAVAILABLE", reason: "OPENAI_API_KEY is not set; deterministic enforcement remains active." };
+
+  const cwd = options.cwd ?? process.cwd();
+  const dir = artifactDirectory(cwd, options.evidenceDir);
+  const request = {
+    model: REVIEWER_MODEL,
+    store: false,
+    reasoning: { effort: "high" },
+    instructions:
+      "You are the workspace.json advisory reviewer. Review only the supplied proposed diff. You are read-only and have no enforcement authority. Return a concise JSON object. PASS means no blocking issue was found in this scope, never a safety certification. Missing evidence is a gap, never approval.",
+    input: `Proposed diff:\n\n${options.diff}`,
+    text: { format: { type: "json_schema", name: "workspacejson_reviewer_verdict", strict: true, schema } },
+  };
+
+  await mkdir(dir, { recursive: true });
+  await writeFile(resolve(dir, "request.json"), `${JSON.stringify(request, null, 2)}\n`);
+  const fetchFn = options.fetchFn ?? fetch;
+  let rawResponse: unknown;
+  try {
+    const response = await fetchFn(API_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+    const responseBody = await response.text();
+    await writeFile(resolve(dir, "response.json"), responseBody);
+    try {
+      rawResponse = JSON.parse(responseBody);
+    } catch {
+      return {
+        status: "UNAVAILABLE",
+        reason: "Reviewer response was malformed; deterministic enforcement remains active.",
+        artifactDir: dir,
+      };
+    }
+    if (!response.ok)
+      return { status: "UNAVAILABLE", reason: `Reviewer API returned HTTP ${response.status}.`, artifactDir: dir };
+  } catch (error) {
+    rawResponse = { error: error instanceof Error ? error.message : String(error) };
+    await writeFile(resolve(dir, "response.json"), `${JSON.stringify(rawResponse, null, 2)}\n`);
+    return {
+      status: "UNAVAILABLE",
+      reason: "Reviewer API request failed; deterministic enforcement remains active.",
+      artifactDir: dir,
+    };
+  }
+
+  const verdict = parseVerdict(extractOutputText(rawResponse) ?? "");
+  if (!verdict)
+    return {
+      status: "UNAVAILABLE",
+      reason: "Reviewer response was malformed; deterministic enforcement remains active.",
+      artifactDir: dir,
+    };
+  const result: ReviewerResult = { status: "COMPLETED", artifactDir: dir, ...verdict };
+  await writeFile(resolve(dir, "verdict.json"), `${JSON.stringify(result, null, 2)}\n`);
+  return result;
+}
+
+export function formatReviewerResult(result: ReviewerResult): string {
+  if (result.status === "UNAVAILABLE")
+    return `REVIEWER: UNAVAILABLE\nREASON: ${result.reason}${result.artifactDir ? `\nARTIFACT: ${result.artifactDir}` : ""}`;
+  return [
+    `VERDICT: ${result.verdict}`,
+    `FINDINGS:\n${result.findings.join("\n") || "None."}`,
+    `EVIDENCE:\n${result.evidence.join("\n") || "None."}`,
+    `WHAT I CHECKED AND DID NOT:\n${[...result.checked, ...result.gaps.map((gap) => `GAP: ${gap}`)].join("\n") || "None."}`,
+    `ARTIFACT: ${result.artifactDir}`,
+  ].join("\n\n");
+}
+
+async function readStdin(): Promise<string> {
+  let input = "";
+  for await (const chunk of process.stdin) input += chunk;
+  return input;
+}
+
+export async function runReviewerCli(args: string[]): Promise<number> {
+  let stdin = false;
+  let diffFile: string | undefined;
+  let evidenceDir: string | undefined;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--diff-stdin" && !stdin) {
+      stdin = true;
+      continue;
+    }
+    if (
+      (argument === "--diff-file" || argument === "--evidence-dir") &&
+      args[index + 1] &&
+      !args[index + 1].startsWith("--")
+    ) {
+      const value = args[index + 1];
+      if (argument === "--diff-file" && !diffFile) diffFile = value;
+      else if (argument === "--evidence-dir" && !evidenceDir) evidenceDir = value;
+      else return usage();
+      index += 1;
+      continue;
+    }
+    return usage();
+  }
+  if ((stdin && diffFile) || (!stdin && !diffFile)) {
+    return usage();
+  }
+  const diff = stdin ? await readStdin() : await readFile(resolve(process.cwd(), diffFile ?? ""), "utf8");
+  const result = await reviewDiff({ diff, evidenceDir });
+  console.log(formatReviewerResult(result));
+  return 0;
+}
+
+function usage(): number {
+  console.error("Usage: workspacejson-codex-mcp review (--diff-stdin | --diff-file <path>) [--evidence-dir <path>]");
+  return 1;
+}

@@ -9,9 +9,9 @@ describe("project Codex configuration", () => {
     expect(config).toContain('args = ["-y", "@workspacejson/codex-mcp", "server"]');
   });
 
-  it("registers the project-scoped adversarial reviewer", () => {
-    expect(config).toContain("[agents.adversarial_reviewer]");
-    expect(config).toContain('config_file = "./agents/adversarial-reviewer.toml"');
+  it("does not claim to register an unsupported custom reviewer agent", () => {
+    expect(config).not.toContain("[agents.adversarial_reviewer]");
+    expect(config).not.toContain("config_file");
   });
 
   it("keeps the repo marketplace entry aligned with the plugin manifest", () => {

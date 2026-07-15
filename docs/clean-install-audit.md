@@ -1,4 +1,9 @@
-# Clean-install and teardown audit
+# Clean-install and teardown audit (historical: 0.1.0)
+
+> This audit records the 0.1.0 package named below. Its custom-agent reviewer
+> transport was superseded by HAC-102's direct API reviewer; do not use this
+> document as evidence for the 0.1.2 reviewer transport. A new packed-artifact
+> audit is required for that release.
 
 Date: 2026-07-13  
 Source baseline: `43eb423` plus the current implementation diff  
@@ -16,7 +21,7 @@ shasum: 84d54f452acf2e131b1c0f4c5fd539be0c8d00b9
 ```
 
 The tarball contained `.codex-plugin/plugin.json`, `.mcp.json`, the hook, built
-server, installer, and `.codex/agents/adversarial-reviewer.toml`.
+server, installer, and the then-current custom-agent reviewer configuration.
 
 ## Clean dependency installation
 
@@ -35,9 +40,7 @@ audit; it required no private registry, credential, repository, or runtime servi
 The packed installer ran twice with `install --with-hook`. Both runs completed,
 and the generated configuration contained exactly one MCP block, reviewer block,
 and hook block. The hook used the stable owned runtime copy under
-`.codex/workspacejson-codex-mcp/`. The installed reviewer declared
-`model = "gpt-5.6-sol"`, high reasoning, `sandbox_mode = "read-only"`, and an
-explicit workspacejson-only MCP map.
+`.codex/workspacejson-codex-mcp/`.
 
 A real MCP client connected to the packed `dist/index.js`:
 

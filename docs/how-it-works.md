@@ -6,7 +6,7 @@ Three planes, each with a distinct authority. The reviewer never controls the ho
 | --- | --- | --- |
 | Evidence | portable `workspace.json` history | descriptive |
 | Action | MCP context + deterministic hook | mechanical enforcement on supported edits |
-| Challenge | read-only GPT-5.6 reviewer | advisory |
+| Challenge | optional direct GPT-5.6 API reviewer | advisory |
 
 ## Evidence tiers
 
@@ -33,6 +33,12 @@ The hook fails open on missing or malformed intelligence and never crashes the e
 
 ## GPT-5.6 adversarial reviewer
 
-The full installer registers a project-scoped `adversarial_reviewer` custom agent pinned to GPT-5.6 with high reasoning and a read-only sandbox. Invoke it after a logical change and before commit or demonstration. It returns a visible, attributed `BLOCK` or `PASS` verdict with reproduced evidence and explicit review gaps.
+Run the explicit opt-in command after a logical change and before commit or demonstration:
 
-The reviewer is advisory. It cannot write files and its verdict never changes the deterministic hook decision. `PASS` means no blocking issue was found in the reviewed scope; it is not a safety certification. Missing or malformed workspace evidence is reported as `UNKNOWN`/`UNAVAILABLE`, not guessed away.
+```bash
+git diff | npx @workspacejson/codex-mcp review --diff-stdin
+```
+
+It requires `OPENAI_API_KEY`, sends only the supplied diff to the OpenAI Responses API with `store: false`, and writes the request, raw response, and normalized verdict to a local receipt directory. Missing credentials, transport failures, and malformed model output are explicit `UNAVAILABLE` results.
+
+The reviewer is advisory. It has no tools, cannot edit the repository, and its verdict never changes the deterministic hook decision. `PASS` means no blocking issue was found in the reviewed scope; it is not a safety certification. Missing or malformed workspace evidence is reported as `UNKNOWN`/`UNAVAILABLE`, not guessed away.

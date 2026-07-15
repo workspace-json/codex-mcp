@@ -25,7 +25,6 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const packageRoot = resolve(here, "..");
 const hookPath = resolve(packageRoot, "hooks", "pre-edit-check.mjs");
-const reviewerSource = resolve(packageRoot, ".codex", "agents", "adversarial-reviewer.toml");
 const distSource = resolve(packageRoot, "dist");
 
 const MCP_HEADER = "[mcp_servers.workspacejson]";
@@ -37,16 +36,6 @@ const MCP_BLOCK = [
   MCP_MARKER,
   'command = "npx"',
   'args = ["-y", "@workspacejson/codex-mcp", "server"]',
-].join("\n");
-
-const AGENT_HEADER = "[agents.adversarial_reviewer]";
-const AGENT_MARKER = "# workspacejson-codex-mcp managed reviewer block";
-const AGENT_BLOCK = [
-  AGENT_HEADER,
-  AGENT_MARKER,
-  'description = "Read-only GPT-5.6 reviewer for correctness, evidence integrity, and unsupported claims."',
-  'config_file = "./agents/adversarial-reviewer.toml"',
-  'nickname_candidates = ["Aegis", "Argus", "Sentinel"]',
 ].join("\n");
 
 const HOOK_MARKER = "# workspacejson-codex-mcp PreToolUse hook";
@@ -200,13 +189,9 @@ async function runInstall() {
   const repoRoot = await findRepoRoot(process.cwd());
   const codexDir = resolve(repoRoot, ".codex");
   const configPath = resolve(codexDir, "config.toml");
-  const agentDir = resolve(codexDir, "agents");
-  const reviewerPath = resolve(agentDir, "adversarial-reviewer.toml");
   const managedRoot = resolve(codexDir, "workspacejson-codex-mcp");
   const managedHookPath = resolve(managedRoot, "hooks", "pre-edit-check.mjs");
   const managedMarkerPath = resolve(managedRoot, RUNTIME_MARKER);
-
-  await mkdir(agentDir, { recursive: true });
 
   let content = "";
   try {
@@ -216,16 +201,11 @@ async function runInstall() {
   }
 
   assertAvailable(content, MCP_HEADER, MCP_MARKER);
-  assertAvailable(content, AGENT_HEADER, AGENT_MARKER);
-  if (existsSync(reviewerPath) && !blockHasMarker(content, AGENT_HEADER, AGENT_MARKER)) {
-    throw new Error(`Refusing to overwrite unmanaged reviewer file ${reviewerPath}`);
-  }
   if (existsSync(managedRoot) && !existsSync(managedMarkerPath)) {
     throw new Error(`Refusing to overwrite unmanaged runtime directory ${managedRoot}`);
   }
 
   content = setTomlBlock(content, MCP_HEADER, MCP_BLOCK);
-  content = setTomlBlock(content, AGENT_HEADER, AGENT_BLOCK);
 
   if (withHook) {
     content = addHookBlock(removeManagedHook(content), managedHookPath);
@@ -236,17 +216,14 @@ async function runInstall() {
   }
 
   await writeAtomic(configPath, content);
-  if (reviewerSource !== reviewerPath) {
-    await writeAtomic(reviewerPath, await readFile(reviewerSource, "utf8"));
-  }
-
   console.log(`Wrote ${configPath}`);
-  console.log(`Installed read-only GPT-5.6 reviewer at ${reviewerPath}`);
   console.log("");
   console.log("Next steps:");
   console.log("  1. Restart Codex.");
   console.log("  2. Run /mcp in the TUI to confirm workspacejson is connected.");
-  console.log("  3. Ask Codex to use the adversarial_reviewer subagent on a completed change.");
+  console.log(
+    "  3. Run `git diff | npx @workspacejson/codex-mcp review --diff-stdin` with OPENAI_API_KEY set for an optional advisory GPT-5.6 review.",
+  );
   if (withHook) {
     console.log("  4. PreToolUse hook is active for apply_patch.");
   }
@@ -261,7 +238,6 @@ async function runUninstall() {
   const repoRoot = await findRepoRoot(process.cwd());
   const codexDir = resolve(repoRoot, ".codex");
   const configPath = resolve(codexDir, "config.toml");
-  const reviewerPath = resolve(codexDir, "agents", "adversarial-reviewer.toml");
   const managedRoot = resolve(codexDir, "workspacejson-codex-mcp");
   const ownsRuntime = existsSync(resolve(managedRoot, RUNTIME_MARKER));
 
@@ -273,21 +249,22 @@ async function runUninstall() {
   }
 
   const ownsMcp = blockHasMarker(content, MCP_HEADER, MCP_MARKER);
-  const ownsAgent = blockHasMarker(content, AGENT_HEADER, AGENT_MARKER);
   if (ownsMcp) content = removeTomlBlock(content, MCP_HEADER);
-  if (ownsAgent) content = removeTomlBlock(content, AGENT_HEADER);
   content = removeManagedHook(content);
   await writeAtomic(configPath, normalizeTomlEdges(content));
-  if (ownsAgent) await rm(reviewerPath, { force: true });
   if (ownsRuntime) await rm(managedRoot, { recursive: true, force: true });
 
   console.log(`Removed workspacejson configuration from ${configPath}`);
-  console.log(`Removed ${reviewerPath}`);
   console.log("Unrelated Codex configuration was preserved.");
 }
 
 async function runServer() {
   await import(resolve(packageRoot, "dist", "index.js"));
+}
+
+async function runReview(args) {
+  const { runReviewerCli } = await import(resolve(packageRoot, "dist", "reviewer.js"));
+  process.exitCode = await runReviewerCli(args);
 }
 
 async function main() {
@@ -298,10 +275,12 @@ async function main() {
     await runUninstall();
   } else if (args[0] === "server") {
     await runServer();
+  } else if (args[0] === "review") {
+    await runReview(args.slice(1));
   } else {
     console.error("Unknown command:", args[0]);
     console.error(
-      "Usage: node scripts/install.mjs [install] [--with-hook] | node scripts/install.mjs uninstall | node scripts/install.mjs server",
+      "Usage: node scripts/install.mjs [install] [--with-hook] | node scripts/install.mjs uninstall | node scripts/install.mjs server | node scripts/install.mjs review",
     );
     process.exit(1);
   }

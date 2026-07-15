@@ -20,8 +20,8 @@
    ```
 
 5. Inspect `git diff --check`, `git diff --stat`, and the complete diff.
-6. Invoke the read-only adversarial reviewer. Resolve every BLOCK or record a human
-   decision; never silently downgrade it.
+6. Invoke the optional read-only GPT-5.6 reviewer with an explicitly supplied diff.
+   Resolve every BLOCK or record a human decision; never silently downgrade it.
 
 ## Commit and handoff
 
@@ -42,6 +42,6 @@ minutes.
 
 ## Teardown
 
-Verify plugin disable/remove behavior, remove generated configuration and agent
+Verify plugin disable/remove behavior, remove generated configuration and runtime
 files from the test checkout, and confirm unrelated Codex configuration remains
 unchanged.

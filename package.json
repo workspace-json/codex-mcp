@@ -1,6 +1,6 @@
 {
   "name": "@workspacejson/codex-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "MCP server that surfaces workspace.json fragility and co-change intelligence to OpenAI Codex before it edits code.",
   "license": "Apache-2.0",
   "type": "module",
@@ -34,16 +34,7 @@
       "import": "./dist/index.js"
     }
   },
-  "files": [
-    "dist",
-    "hooks",
-    "scripts/install.mjs",
-    ".codex-plugin",
-    ".codex/agents",
-    ".mcp.json",
-    "README.md",
-    "LICENSE"
-  ],
+  "files": ["dist", "hooks", "scripts/install.mjs", ".codex-plugin", ".mcp.json", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",

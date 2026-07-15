@@ -15,14 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Full Apache License 2.0 text.
 - Package metadata: repository, homepage, bugs, and keywords.
 - README sections: "See it in 30 seconds", "Option 1: MCP context only", "Option 2: Full Codex plugin", and "Current limitations".
-- Project-scoped, read-only GPT-5.6 adversarial reviewer and installer wiring.
+- Optional, direct, read-only GPT-5.6 API reviewer with local request/response receipts.
 - Repository execution guidance and a tracked Build Week runbook.
 - Structured-response bounding with deny-preservation regression coverage.
 - Explicit fail-open warnings for missing, malformed, and unparseable workspace intelligence.
 
 ### Changed
 
-- `package.json` `files` array now includes `dist`, `hooks`, `.codex-plugin`, `.codex/agents`, `.mcp.json`, `README.md`, and `LICENSE` so the npm package contains the plugin manifest, hook assets, and reviewer.
+- `package.json` `files` array includes the runtime, hook assets, plugin manifest, and installer; the optional reviewer is compiled into `dist` rather than installed as a custom Codex agent.
 - Plugin manifest `repository` updated from `workspace-json/codex-plugin` to `workspace-json/codex-mcp`.
 - README network wording clarified to distinguish runtime stdio behavior from initial npm install.
 - README `fragile:false` wording clarified to mean "no recorded risk", not "verified safe".

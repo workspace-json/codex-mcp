@@ -11,11 +11,12 @@ afterEach(() => {
 });
 
 describe("fallback installer", () => {
-  it("installs the server config, hook, and read-only reviewer idempotently", () => {
+  it("installs the server config and hook idempotently without a custom reviewer agent", () => {
     const target = mkdtempSync(resolve(tmpdir(), "wjson-install-"));
     created.push(target);
     writeFileSync(resolve(target, "package.json"), "{}\n");
     const codexDir = resolve(target, ".codex");
+    mkdirSync(codexDir, { recursive: true });
     const configPath = resolve(codexDir, "config.toml");
 
     const install = () =>
@@ -31,17 +32,10 @@ describe("fallback installer", () => {
 
     const config = readFileSync(configPath, "utf8");
     expect(config).toContain('args = ["-y", "@workspacejson/codex-mcp", "server"]');
-    expect(config).toContain("[agents.adversarial_reviewer]");
     expect(config.match(/\[mcp_servers\.workspacejson\]/g)).toHaveLength(1);
-    expect(config.match(/\[agents\.adversarial_reviewer\]/g)).toHaveLength(1);
     expect(config.match(/# workspacejson-codex-mcp PreToolUse hook/g)).toHaveLength(1);
     expect(config).toContain(resolve(target, ".codex/workspacejson-codex-mcp/hooks/pre-edit-check.mjs"));
     expect(existsSync(resolve(target, ".codex/workspacejson-codex-mcp/dist/index.js"))).toBe(true);
-
-    const reviewer = resolve(target, ".codex/agents/adversarial-reviewer.toml");
-    expect(existsSync(reviewer)).toBe(true);
-    expect(readFileSync(reviewer, "utf8")).toContain('model = "gpt-5.6-terra"');
-    expect(readFileSync(reviewer, "utf8")).toContain('sandbox_mode = "read-only"');
 
     writeFileSync(configPath, `approval_policy = "on-request"\n\n${config}`);
     const uninstall = spawnSync("node", [resolve(process.cwd(), "scripts/install.mjs"), "uninstall"], {
@@ -52,9 +46,7 @@ describe("fallback installer", () => {
     const after = readFileSync(configPath, "utf8");
     expect(after).toContain('approval_policy = "on-request"');
     expect(after).not.toContain("[mcp_servers.workspacejson]");
-    expect(after).not.toContain("[agents.adversarial_reviewer]");
     expect(after).not.toContain("workspacejson-codex-mcp PreToolUse hook");
-    expect(existsSync(reviewer)).toBe(false);
 
     // Regression: the managed hook must also be removed when it is the first
     // remaining TOML section (no unrelated prefix creates a leading newline).
@@ -72,11 +64,10 @@ describe("fallback installer", () => {
     created.push(target);
     writeFileSync(resolve(target, "package.json"), "{}\n");
     const codexDir = resolve(target, ".codex");
-    mkdirSync(resolve(codexDir, "agents"), { recursive: true });
+    mkdirSync(codexDir, { recursive: true });
     const configPath = resolve(codexDir, "config.toml");
     const original = '[mcp_servers.workspacejson]\ncommand = "custom"\n';
     writeFileSync(configPath, original);
-    writeFileSync(resolve(codexDir, "agents/adversarial-reviewer.toml"), 'name = "mine"\n');
 
     const install = spawnSync("node", [resolve(process.cwd(), "scripts/install.mjs"), "install", "--with-hook"], {
       cwd: target,
@@ -92,7 +83,6 @@ describe("fallback installer", () => {
     });
     expect(uninstall.status, uninstall.stderr).toBe(0);
     expect(readFileSync(configPath, "utf8")).toContain('command = "custom"');
-    expect(readFileSync(resolve(codexDir, "agents/adversarial-reviewer.toml"), "utf8")).toBe('name = "mine"\n');
   });
 
   it("refuses to overwrite or remove an unmanaged runtime directory", () => {
