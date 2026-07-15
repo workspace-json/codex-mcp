@@ -14,12 +14,20 @@ interface RepositoryState {
   readonly HEAD: { name: string } | undefined;
   readonly indexChanges: readonly Change[];
   readonly workingTreeChanges: readonly Change[];
+  /**
+   * The real vscode.git API puts the change event on RepositoryState, not on
+   * Repository itself. A prior version of this file declared a nonexistent
+   * `Repository.onDidChangeState`, which threw `TypeError: r.onDidChangeState
+   * is not a function` the moment a real repo opened (caught live in the
+   * extension host log during manual HAC-170 verification) — silently
+   * breaking every live changeset update after the first.
+   */
+  readonly onDidChange: vscode.Event<void>;
 }
 
 interface Repository {
   readonly rootUri: vscode.Uri;
   readonly state: RepositoryState;
-  readonly onDidChangeState: vscode.Event<RepositoryState>;
 }
 
 interface GitExtension {
@@ -78,7 +86,7 @@ export async function subscribeChangeset(
     );
     if (repo) {
       emitCurrent(repo);
-      disposables.push(repo.onDidChangeState(() => emitCurrent(repo)));
+      disposables.push(repo.state.onDidChange(() => emitCurrent(repo)));
     } else {
       emitCurrent();
     }
@@ -86,7 +94,7 @@ export async function subscribeChangeset(
     const openListener = api.onDidOpenRepository((r) => {
       if (rootPath === r.rootUri.fsPath || rootPath.startsWith(r.rootUri.fsPath + "/")) {
         emitCurrent(r);
-        disposables.push(r.onDidChangeState(() => emitCurrent(r)));
+        disposables.push(r.state.onDidChange(() => emitCurrent(r)));
       }
     });
     disposables.push(openListener);
