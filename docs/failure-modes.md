@@ -15,7 +15,7 @@ This product's entire value proposition is what happens when evidence is incompl
 | `--verify` requested, the recorded command reproduces its output | Tier upgrades `OBSERVED` → `VERIFIED`. |
 | `--verify` requested, the recorded command does not reproduce | Downgrades to `OBSERVED`. Never throws, never blocks on a verification failure. |
 | Verification requested on the hook's hot path (`WJSON_VERIFY=1` via stdin event) | Ignored — the hook never re-runs verification commands inline; only the opt-in CLI/tool path does. Prevents an editor keystroke from triggering shell commands. |
-| GPT-5.6 reviewer key missing, API unavailable, or not invoked † | Prints an explicit `UNAVAILABLE` result and has no effect on enforcement. `hooks/pre-edit-check.mjs` contains no reference to the reviewer at all, so it denies/warns/annotates identically with or without it. |
+| GPT-5.6 reviewer keys missing, configured API unavailable, or not invoked † | Prints an explicit `UNAVAILABLE` result and has no effect on enforcement. `hooks/pre-edit-check.mjs` contains no reference to the reviewer at all, so it denies/warns/annotates identically with or without it. |
 | GPT-5.6 reviewer returns `PASS` † | Advisory only — does not change, weaken, or bypass the hook's decision on any file. The reviewer request instructs that `PASS` is not a safety certification; no code path exists that would let it alter the hook. |
 | Installer run against a repo with an existing unmanaged same-name config section | Refuses and throws rather than overwriting it. |
 | Installer run against a repo with an existing unmanaged runtime directory at its target path | Refuses and throws rather than removing or overwriting it. |

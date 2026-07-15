@@ -1,8 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-export const REVIEWER_MODEL = "gpt-5.6";
-const API_URL = "https://api.openai.com/v1/responses";
+export const OPENAI_REVIEWER_MODEL = "gpt-5.6";
+export const OPENROUTER_REVIEWER_MODEL = "openai/gpt-5.6-terra";
+const OPENAI_API_URL = "https://api.openai.com/v1/responses";
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/responses";
 
 export type ReviewerVerdict = "PASS" | "BLOCK";
 export type ReviewerResult =
@@ -18,6 +20,13 @@ export type ReviewerResult =
     };
 
 type Fetch = typeof fetch;
+type ReviewerTransport = {
+  apiKey: string;
+  endpoint: string;
+  model: string;
+  provider: "openai" | "openrouter";
+};
+type ReviewerProvider = ReviewerTransport["provider"];
 
 const schema = {
   type: "object",
@@ -73,16 +82,23 @@ export async function reviewDiff(options: {
   cwd?: string;
   evidenceDir?: string;
   apiKey?: string;
+  openRouterApiKey?: string;
+  openRouterEndpoint?: string;
+  model?: string;
+  provider?: ReviewerProvider;
   fetchFn?: Fetch;
 }): Promise<ReviewerResult> {
-  const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
-  if (!apiKey)
-    return { status: "UNAVAILABLE", reason: "OPENAI_API_KEY is not set; deterministic enforcement remains active." };
+  const transport = resolveTransport(options);
+  if (!transport)
+    return {
+      status: "UNAVAILABLE",
+      reason: unavailableReason(options),
+    };
 
   const cwd = options.cwd ?? process.cwd();
   const dir = artifactDirectory(cwd, options.evidenceDir);
   const request = {
-    model: REVIEWER_MODEL,
+    model: transport.model,
     store: false,
     reasoning: { effort: "high" },
     instructions:
@@ -93,12 +109,16 @@ export async function reviewDiff(options: {
 
   await mkdir(dir, { recursive: true });
   await writeFile(resolve(dir, "request.json"), `${JSON.stringify(request, null, 2)}\n`);
+  await writeFile(
+    resolve(dir, "receipt.json"),
+    `${JSON.stringify({ provider: transport.provider, endpoint: transport.endpoint, model: transport.model }, null, 2)}\n`,
+  );
   const fetchFn = options.fetchFn ?? fetch;
   let rawResponse: unknown;
   try {
-    const response = await fetchFn(API_URL, {
+    const response = await fetchFn(transport.endpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${transport.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
     const responseBody = await response.text();
@@ -134,6 +154,74 @@ export async function reviewDiff(options: {
   const result: ReviewerResult = { status: "COMPLETED", artifactDir: dir, ...verdict };
   await writeFile(resolve(dir, "verdict.json"), `${JSON.stringify(result, null, 2)}\n`);
   return result;
+}
+
+function resolveTransport(options: {
+  apiKey?: string;
+  openRouterApiKey?: string;
+  openRouterEndpoint?: string;
+  model?: string;
+  provider?: ReviewerProvider;
+}): ReviewerTransport | undefined {
+  const configuredProvider = options.provider ?? process.env.WORKSPACEJSON_REVIEWER_PROVIDER;
+  const openRouterApiKey = options.openRouterApiKey ?? process.env.OPENROUTER_API_KEY;
+  const openAiApiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
+  const useOpenRouter =
+    configuredProvider === "openrouter" ||
+    (!!options.openRouterApiKey && !options.apiKey) ||
+    (!configuredProvider && !!process.env.WORKSPACEJSON_REVIEWER_BASE_URL && !options.apiKey);
+  const useOpenAi = configuredProvider === "openai" || (!!options.apiKey && !options.openRouterApiKey);
+
+  if (useOpenRouter && openRouterApiKey)
+    return {
+      provider: "openrouter",
+      apiKey: openRouterApiKey,
+      endpoint: options.openRouterEndpoint ?? process.env.WORKSPACEJSON_REVIEWER_BASE_URL ?? OPENROUTER_API_URL,
+      model: options.model ?? process.env.WORKSPACEJSON_REVIEWER_MODEL ?? OPENROUTER_REVIEWER_MODEL,
+    };
+
+  if (useOpenAi && openAiApiKey)
+    return {
+      provider: "openai",
+      apiKey: openAiApiKey,
+      endpoint: OPENAI_API_URL,
+      model: options.model ?? process.env.WORKSPACEJSON_REVIEWER_MODEL ?? OPENAI_REVIEWER_MODEL,
+    };
+
+  if (!configuredProvider && !options.apiKey && !options.openRouterApiKey && openRouterApiKey && !openAiApiKey)
+    return {
+      provider: "openrouter",
+      apiKey: openRouterApiKey,
+      endpoint: process.env.WORKSPACEJSON_REVIEWER_BASE_URL ?? OPENROUTER_API_URL,
+      model: options.model ?? process.env.WORKSPACEJSON_REVIEWER_MODEL ?? OPENROUTER_REVIEWER_MODEL,
+    };
+  if (!configuredProvider && !options.apiKey && !options.openRouterApiKey && openAiApiKey && !openRouterApiKey)
+    return {
+      provider: "openai",
+      apiKey: openAiApiKey,
+      endpoint: OPENAI_API_URL,
+      model: options.model ?? process.env.WORKSPACEJSON_REVIEWER_MODEL ?? OPENAI_REVIEWER_MODEL,
+    };
+  return undefined;
+}
+
+function unavailableReason(options: {
+  apiKey?: string;
+  openRouterApiKey?: string;
+  provider?: ReviewerProvider;
+}): string {
+  const configuredProvider = options.provider ?? process.env.WORKSPACEJSON_REVIEWER_PROVIDER;
+  if (configuredProvider && configuredProvider !== "openai" && configuredProvider !== "openrouter")
+    return "WORKSPACEJSON_REVIEWER_PROVIDER must be openai or openrouter; deterministic enforcement remains active.";
+  if (
+    !options.apiKey &&
+    !options.openRouterApiKey &&
+    process.env.OPENAI_API_KEY &&
+    process.env.OPENROUTER_API_KEY &&
+    !configuredProvider
+  )
+    return "Both reviewer keys are set; configure WORKSPACEJSON_REVIEWER_PROVIDER as openai or openrouter; deterministic enforcement remains active.";
+  return "No reviewer API key is set (OPENAI_API_KEY or OPENROUTER_API_KEY); deterministic enforcement remains active.";
 }
 
 export function formatReviewerResult(result: ReviewerResult): string {

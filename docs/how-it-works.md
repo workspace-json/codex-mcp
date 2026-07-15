@@ -39,6 +39,6 @@ Run the explicit opt-in command after a logical change and before commit or demo
 git diff | npx @workspacejson/codex-mcp review --diff-stdin
 ```
 
-It requires `OPENAI_API_KEY`, sends only the supplied diff to the OpenAI Responses API with `store: false`, and writes the request, raw response, and normalized verdict to a local receipt directory. Missing credentials, transport failures, and malformed model output are explicit `UNAVAILABLE` results.
+It requires either `OPENAI_API_KEY` (OpenAI Responses API) or `OPENROUTER_API_KEY` (OpenRouter Responses API). When both keys exist, set `WORKSPACEJSON_REVIEWER_PROVIDER` to `openai` or `openrouter`; `WORKSPACEJSON_REVIEWER_BASE_URL` selects OpenRouter explicitly. It sends only the supplied diff and writes the request, raw response, normalized verdict, provider, endpoint, and model to a local receipt directory. The OpenAI request uses `store: false`; OpenRouter's Responses API is stateless. Missing credentials, ambiguous provider selection, transport failures, and malformed model output are explicit `UNAVAILABLE` results.
 
 The reviewer is advisory. It has no tools, cannot edit the repository, and its verdict never changes the deterministic hook decision. `PASS` means no blocking issue was found in the reviewed scope; it is not a safety certification. Missing or malformed workspace evidence is reported as `UNKNOWN`/`UNAVAILABLE`, not guessed away.

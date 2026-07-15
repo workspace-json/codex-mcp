@@ -115,7 +115,7 @@ Each is checkable, not asserted: run `npm run verify` from a clean clone to repr
 
 ## Trust boundary
 
-The MCP and deterministic hook run locally over stdio and do not upload repository contents. Initial package installation may contact npm. The optional `review` command sends only the diff you explicitly supply to the OpenAI API when `OPENAI_API_KEY` is set; it uses `store: false` and preserves a local request/response receipt. Do not supply diffs containing secrets.
+The MCP and deterministic hook run locally over stdio and do not upload repository contents. Initial package installation may contact npm. The optional `review` command sends only the diff you explicitly supply to a configured API provider: OpenAI (`OPENAI_API_KEY`) or OpenRouter (`OPENROUTER_API_KEY`). When both keys exist, set `WORKSPACEJSON_REVIEWER_PROVIDER` to `openai` or `openrouter`; an explicit `WORKSPACEJSON_REVIEWER_BASE_URL` also selects OpenRouter. It uses `store: false` with OpenAI and preserves a local request/response receipt that identifies the provider and model. Do not supply diffs containing secrets.
 
 ## Current limitations
 

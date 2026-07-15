@@ -7,6 +7,7 @@ import { formatReviewerResult, reviewDiff, runReviewerCli } from "../../src/revi
 
 const created: string[] = [];
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const path of created.splice(0)) rmSync(path, { recursive: true, force: true });
 });
 
@@ -17,7 +18,8 @@ describe("direct advisory reviewer", () => {
       reviewDiff({ diff: "diff --git a/a b/a", apiKey: "", fetchFn: fetchFn as typeof fetch }),
     ).resolves.toEqual({
       status: "UNAVAILABLE",
-      reason: "OPENAI_API_KEY is not set; deterministic enforcement remains active.",
+      reason:
+        "No reviewer API key is set (OPENAI_API_KEY or OPENROUTER_API_KEY); deterministic enforcement remains active.",
     });
     expect(fetchFn).not.toHaveBeenCalled();
   });
@@ -77,6 +79,54 @@ describe("direct advisory reviewer", () => {
     expect(result.reason).toContain("malformed");
     if (!result.artifactDir) throw new Error("missing malformed-response artifact");
     expect(existsSync(resolve(result.artifactDir, "response.json"))).toBe(true);
+  });
+
+  it("uses explicit OpenRouter transport settings and records the provider", async () => {
+    const cwd = mkdtempSync(resolve(tmpdir(), "wjson-review-"));
+    created.push(cwd);
+    const fetchFn = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            output_text: JSON.stringify({ verdict: "PASS", findings: [], evidence: [], checked: ["diff"], gaps: [] }),
+          }),
+          { status: 200 },
+        ),
+    );
+    const result = await reviewDiff({
+      diff: "diff --git a/a b/a",
+      cwd,
+      openRouterApiKey: "router-key",
+      openRouterEndpoint: "https://router.example/responses",
+      model: "openai/gpt-5.6-terra",
+      fetchFn: fetchFn as unknown as typeof fetch,
+    });
+
+    expect(result.status).toBe("COMPLETED");
+    if (!result.artifactDir) throw new Error("missing receipt artifact");
+    expect(fetchFn).toHaveBeenCalledWith(
+      "https://router.example/responses",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(readFileSync(resolve(result.artifactDir, "receipt.json"), "utf8")).toContain('"provider": "openrouter"');
+    expect(readFileSync(resolve(result.artifactDir, "request.json"), "utf8")).toContain(
+      '"model": "openai/gpt-5.6-terra"',
+    );
+  });
+
+  it("gives an explicit OpenAI credential precedence over an ambient OpenRouter credential", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "ambient-router-key");
+    const fetchFn = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            output_text: JSON.stringify({ verdict: "PASS", findings: [], evidence: [], checked: ["diff"], gaps: [] }),
+          }),
+          { status: 200 },
+        ),
+    );
+    await reviewDiff({ diff: "diff --git a/a b/a", apiKey: "explicit-openai-key", fetchFn: fetchFn as typeof fetch });
+    expect(fetchFn).toHaveBeenCalledWith("https://api.openai.com/v1/responses", expect.any(Object));
   });
 
   it("rejects ambiguous or incomplete diff input arguments", async () => {
