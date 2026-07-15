@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -43,6 +44,22 @@ const schema = {
 
 function artifactDirectory(cwd: string, supplied?: string): string {
   return resolve(cwd, supplied ?? ".local/workspacejson/reviewer", new Date().toISOString().replaceAll(":", "-"));
+}
+
+/**
+ * Deterministic identity of the reviewed diff and the repo-relative paths it
+ * touched. Recorded into receipt.json so a consumer (the VS Code intelligence
+ * surface, HAC-170 §5.2) can tell when the change has moved past what was
+ * reviewed and mark the receipt stale, rather than showing a stale PASS/BLOCK.
+ */
+function reviewedScope(diff: string): { scopeHash: string; scopePaths: string[] } {
+  const scopeHash = createHash("sha256").update(diff).digest("hex");
+  const paths = new Set<string>();
+  for (const line of diff.split("\n")) {
+    const match = /^diff --git a\/(.+?) b\/(.+)$/.exec(line);
+    if (match) paths.add(match[2]);
+  }
+  return { scopeHash, scopePaths: [...paths].sort() };
 }
 
 function extractOutputText(response: unknown): string | undefined {
@@ -109,9 +126,20 @@ export async function reviewDiff(options: {
 
   await mkdir(dir, { recursive: true });
   await writeFile(resolve(dir, "request.json"), `${JSON.stringify(request, null, 2)}\n`);
+  const scope = reviewedScope(options.diff);
   await writeFile(
     resolve(dir, "receipt.json"),
-    `${JSON.stringify({ provider: transport.provider, endpoint: transport.endpoint, model: transport.model }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        provider: transport.provider,
+        endpoint: transport.endpoint,
+        model: transport.model,
+        scopeHash: scope.scopeHash,
+        scopePaths: scope.scopePaths,
+      },
+      null,
+      2,
+    )}\n`,
   );
   const fetchFn = options.fetchFn ?? fetch;
   let rawResponse: unknown;

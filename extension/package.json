@@ -21,10 +21,24 @@
       "explorer": [
         {
           "id": "workspacejsonCodexChangeset",
-          "name": "Current Change",
+          "name": "workspace.json",
           "when": "workspaceFolderCount > 0 && workspacejsonCodex.changesetView.enabled",
-          "contextualTitle": "Current Change"
+          "contextualTitle": "workspace.json"
         }
+      ]
+    },
+    "commands": [
+      { "command": "workspacejson.focusCurrentChange", "title": "Show Current Change", "category": "workspace.json" },
+      { "command": "workspacejson.inspectEvidence", "title": "Inspect Evidence", "category": "workspace.json" },
+      { "command": "workspacejson.runVerification", "title": "Run Verification", "category": "workspace.json" },
+      { "command": "workspacejson.runReview", "title": "Run Advisory Review", "category": "workspace.json" },
+      { "command": "workspacejson.inspectReceipt", "title": "Inspect Review Receipt", "category": "workspace.json" },
+      { "command": "workspacejson.openIntelligenceFile", "title": "Open Intelligence File", "category": "workspace.json" },
+      { "command": "workspacejson.openFile", "title": "Open File", "category": "workspace.json" }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "workspacejson.openFile", "when": "false" }
       ]
     }
   },

@@ -38,7 +38,12 @@ interface GitExtension {
 
 const GIT_EXTENSION_ID = "vscode.git";
 
-export type Changeset = Set<string>;
+/**
+ * A known changeset (possibly empty) when a Git repository backs the folder,
+ * or `undefined` when Git is unavailable — so the model can honestly report an
+ * unavailable current-change assessment instead of a false "no changes" (§6.2).
+ */
+export type Changeset = Set<string> | undefined;
 
 async function getGitExtension(): Promise<GitExtension | undefined> {
   const extension = vscode.extensions.getExtension<GitExtension>(GIT_EXTENSION_ID);
@@ -66,8 +71,8 @@ export async function subscribeChangeset(
 
   const emitCurrent = (repo?: Repository) => {
     try {
-      const paths = repo ? repoChangesToPaths(rootPath, repo) : new Set<string>();
-      callback(paths);
+      // No repo => Git state is genuinely unknown, not "no changes".
+      callback(repo ? repoChangesToPaths(rootPath, repo) : undefined);
     } catch (err) {
       onError(err instanceof Error ? err : new Error(String(err)));
     }

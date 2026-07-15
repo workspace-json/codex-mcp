@@ -3,15 +3,17 @@ import * as vscode from "vscode";
 import { type IntelligenceSnapshot, type FragileFileIntelligence, parseSnapshot } from "./parseSnapshot.js";
 import { relativeWorkspacePath } from "./pathMatch.js";
 import { subscribeChangeset, type Changeset } from "./gitChangeset.js";
-import { findLatestVerdict, type ReviewerVerdict } from "./reviewerVerdict.js";
+import { loadLatestReceipt, summarizeReview, type ReceiptLoad } from "./reviewerVerdict.js";
 import { refreshVerdict } from "./verdictRefresh.js";
-import { computeChangesetFiles, type ChangesetFile } from "./changesetLogic.js";
+import { type AvailabilityState, type IntelligenceView, type SourceState, deriveView } from "./semanticModel.js";
 
 export type { FragileFileIntelligence } from "./parseSnapshot.js";
 export type { ChangesetFile } from "./changesetLogic.js";
+export type { IntelligenceView } from "./semanticModel.js";
 
 const ARTIFACT_PATH = ".agents/workspace.json";
 const VERDICT_GLOB = ".local/workspacejson/reviewer/**/verdict.json";
+const RECEIPT_GLOB = ".local/workspacejson/reviewer/**/receipt.json";
 const DEBOUNCE_MS = 200;
 
 export type FileStatus =
@@ -21,43 +23,31 @@ export type FileStatus =
   /** Not present in generated.fileIndex at all: workspace.json has no opinion on this file. */
   | { kind: "unknown" };
 
-export interface CurrentChange {
-  /** All repo-relative paths in the current changeset (staged + working tree). */
-  changeset: Set<string>;
-  /** Fragile files in the changeset that have at least one missing partner. */
-  files: ChangesetFile[];
-  /** Total number of missing co-change partners across all files. */
-  totalMissing: number;
-  /** Set of repo-relative paths whose evidence is flagged unavailable in the latest verdict (gaps). */
-  evidenceUnavailable: Set<string>;
-  /** Latest verdict, if present. */
-  verdict?: ReviewerVerdict;
+interface SourceEntry {
+  snapshot: IntelligenceSnapshot | undefined;
+  availability: AvailabilityState;
+  error?: string;
 }
 
 /**
- * The extension-host singleton. Exactly one reader of workspace.json.
- * Every renderer (decoration, hover, tree) reads through this model and
- * subscribes to onDidChangeIntelligence; none reads workspace.json or
- * computes tiers/path matches independently (HAC-170).
+ * The extension-host singleton. Exactly one reader of workspace.json (§1.5).
+ * Every renderer (decoration, hover, tree, status bar) reads through this model
+ * and subscribes to onDidChangeIntelligence; none reads workspace.json, parses
+ * a reviewer receipt, computes tiers, or matches paths independently (§1.1).
  *
- * This spine also owns the current proposed changeset (staged + working tree
- * via the built-in vscode.git API) and the latest GPT-5.6 reviewer verdict
- * discovered under `.local/workspacejson/reviewer/** /verdict.json`. Both
- * are independent artifacts from workspace.json — the verdict is watched on
- * its own glob (VERDICT_GLOB) rather than piggybacking on the workspace.json
- * watcher, so a fresh verdict reload happens on its own, not only as a side
- * effect of an unrelated workspace.json edit. All three sources funnel into
- * the same onDidChangeIntelligence event, so the A3 tree rebuilds whenever
- * any of them changes — but the verdict itself is advisory-only and
- * currently surfaces solely as an informational tooltip annotation
- * (changesetTreeProvider.ts's verdictAnnotationLines); it deliberately does
- * NOT drive deriveFileLabel's DENY/missing-partner label (META-117: the
- * model annotates, it never decides).
+ * The model owns three independent sources — the parsed workspace snapshot
+ * (with its availability), the current Git changeset, and the latest reviewer
+ * receipt discovered under `.local/workspacejson/reviewer/**` — and folds them
+ * into one immutable {@link IntelligenceView} (§2.5). All three funnel into the
+ * single onDidChangeIntelligence event, so every surface re-renders from one
+ * snapshot version in the same event cycle. The reviewer verdict is advisory
+ * only: it is surfaced in its own REVIEW plane and never rewrites the
+ * deterministic decision (§5.4).
  */
 export class WorkspaceIntelligenceModel implements vscode.Disposable {
-  private readonly snapshots = new Map<string, IntelligenceSnapshot | undefined>();
+  private readonly sources = new Map<string, SourceEntry>();
   private readonly changesets = new Map<string, Changeset>();
-  private readonly verdicts = new Map<string, ReviewerVerdict | undefined>();
+  private readonly reviews = new Map<string, ReceiptLoad>();
   private readonly artifactTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly verdictTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly watchers = new Map<string, vscode.FileSystemWatcher>();
@@ -81,7 +71,7 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     if (this.watchers.has(key)) return;
 
     void this.reload(folder);
-    void this.loadVerdict(folder);
+    void this.loadReview(folder);
 
     const artifactWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, ARTIFACT_PATH));
     const scheduleArtifact = () => this.scheduleArtifact(folder);
@@ -91,12 +81,15 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     this.watchers.set(key, artifactWatcher);
     this.disposables.push(artifactWatcher);
 
-    const verdictWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, VERDICT_GLOB));
-    const scheduleVerdict = () => this.scheduleVerdict(folder);
-    verdictWatcher.onDidCreate(scheduleVerdict);
-    verdictWatcher.onDidChange(scheduleVerdict);
-    verdictWatcher.onDidDelete(scheduleVerdict);
-    this.disposables.push(verdictWatcher);
+    // The verdict and its sibling receipt both feed the same review refresh.
+    for (const glob of [VERDICT_GLOB, RECEIPT_GLOB]) {
+      const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, glob));
+      const scheduleVerdict = () => this.scheduleVerdict(folder);
+      watcher.onDidCreate(scheduleVerdict);
+      watcher.onDidChange(scheduleVerdict);
+      watcher.onDidDelete(scheduleVerdict);
+      this.disposables.push(watcher);
+    }
 
     void (async () => {
       const subscription = await subscribeChangeset(
@@ -130,7 +123,7 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
       key,
       setTimeout(() => {
         this.verdictTimers.delete(key);
-        void this.loadVerdict(folder);
+        void this.loadReview(folder);
       }, DEBOUNCE_MS),
     );
   }
@@ -142,8 +135,8 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     try {
       raw = await fs.readFile(artifact.fsPath, "utf8");
     } catch {
-      // Genuinely absent or unreadable: silent-ok, no opinion to report.
-      this.snapshots.set(key, undefined);
+      // Genuinely absent/unreadable: an explicit unavailable source, not empty evidence (§6.2).
+      this.sources.set(key, { snapshot: undefined, availability: "UNAVAILABLE" });
       this.emitter.fire();
       return;
     }
@@ -153,8 +146,13 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     } catch {
       snapshot = undefined;
     }
-    if (!snapshot) console.debug(`[workspace.json intelligence] present but malformed, treating as unavailable: ${artifact.fsPath}`);
-    this.snapshots.set(key, snapshot);
+    if (!snapshot) {
+      // Present but malformed: a FAILED source, distinct from a missing one (§6.2).
+      console.debug(`[workspace.json intelligence] present but malformed, treating as failed: ${artifact.fsPath}`);
+      this.sources.set(key, { snapshot: undefined, availability: "FAILED", error: "workspace.json is malformed" });
+    } else {
+      this.sources.set(key, { snapshot, availability: "AVAILABLE" });
+    }
     this.emitter.fire();
   }
 
@@ -163,47 +161,54 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     this.emitter.fire();
   }
 
-  async loadVerdict(folder: vscode.WorkspaceFolder): Promise<void> {
+  async loadReview(folder: vscode.WorkspaceFolder): Promise<void> {
     const key = folder.uri.toString();
     await refreshVerdict(
       folder.uri.fsPath,
       async (rootPath) => {
         try {
-          return await findLatestVerdict(rootPath);
+          return await loadLatestReceipt(rootPath);
         } catch (err) {
-          console.debug("[workspace.json intelligence] verdict discovery failed", err);
+          console.debug("[workspace.json intelligence] receipt discovery failed", err);
           throw err;
         }
       },
-      (verdict) => this.verdicts.set(key, verdict),
+      (load) => this.reviews.set(key, load),
       () => this.emitter.fire(),
+      (): ReceiptLoad => ({ kind: "none" }),
     );
   }
 
-  getSnapshot(folder: vscode.WorkspaceFolder): IntelligenceSnapshot | undefined {
-    return this.snapshots.get(folder.uri.toString());
-  }
-
-  getCurrentChange(folder: vscode.WorkspaceFolder): CurrentChange {
-    const snapshot = this.snapshots.get(folder.uri.toString());
-    const changeset = this.changesets.get(folder.uri.toString()) ?? new Set<string>();
-    const verdict = this.verdicts.get(folder.uri.toString());
-    const evidenceUnavailable = new Set<string>(verdict?.gaps ?? []);
-    const { files, totalMissing } = computeChangesetFiles(snapshot, changeset);
-    return { changeset, files, totalMissing, evidenceUnavailable, verdict };
+  /** The single immutable view every renderer consumes. */
+  getView(folder: vscode.WorkspaceFolder): IntelligenceView {
+    const key = folder.uri.toString();
+    const entry = this.sources.get(key);
+    const changeset = this.changesets.get(key);
+    const load = this.reviews.get(key) ?? { kind: "none" as const };
+    const source: SourceState = {
+      path: ARTIFACT_PATH,
+      availability: entry?.availability ?? "UNKNOWN",
+      error: entry?.error,
+    };
+    return deriveView({
+      snapshot: entry?.snapshot,
+      source,
+      changeset,
+      review: summarizeReview(load, changeset),
+    });
   }
 
   getStatus(uri: vscode.Uri): FileStatus | undefined {
     if (uri.scheme !== "file") return undefined;
     const folder = vscode.workspace.getWorkspaceFolder(uri);
     if (!folder) return undefined;
-    const snapshot = this.snapshots.get(folder.uri.toString());
-    if (!snapshot) return undefined;
+    const entry = this.sources.get(folder.uri.toString());
+    if (!entry?.snapshot) return undefined;
     const path = relativeWorkspacePath(folder.uri.fsPath, uri.fsPath);
     if (!path) return undefined;
-    const fragile = snapshot.fragileFiles.get(path);
+    const fragile = entry.snapshot.fragileFiles.get(path);
     if (fragile) return { kind: "fragile", file: fragile };
-    return snapshot.fileIndex.has(path) ? { kind: "indexed" } : { kind: "unknown" };
+    return entry.snapshot.fileIndex.has(path) ? { kind: "indexed" } : { kind: "unknown" };
   }
 
   dispose(): void {
