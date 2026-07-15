@@ -47,10 +47,18 @@ function artifactDirectory(cwd: string, supplied?: string): string {
 }
 
 /**
- * Deterministic identity of the reviewed diff and the repo-relative paths it
- * touched. Recorded into receipt.json so a consumer (the VS Code intelligence
- * surface, HAC-170 §5.2) can tell when the change has moved past what was
- * reviewed and mark the receipt stale, rather than showing a stale PASS/BLOCK.
+ * Records two distinct facts about the reviewed diff into receipt.json:
+ *   - `scopePaths`: the repo-relative file set the diff touched. A consumer
+ *     (the VS Code intelligence surface, HAC-170 §5.2) compares this against
+ *     the current changeset's file set to mark the receipt stale once the
+ *     change has moved to a different set of files, rather than showing a
+ *     stale PASS/BLOCK as current.
+ *   - `scopeHash`: a content identity for the exact reviewed diff, recorded
+ *     for audit and displayed as the receipt's scope id. It is NOT used to
+ *     drive staleness: the extension consumes the VS Code Git change-list API
+ *     and cannot recompute a diff hash without a per-render subprocess, which
+ *     §6.1 forbids. File-set movement is the freshness signal; the hash is
+ *     identity only.
  */
 function reviewedScope(diff: string): { scopeHash: string; scopePaths: string[] } {
   const scopeHash = createHash("sha256").update(diff).digest("hex");
