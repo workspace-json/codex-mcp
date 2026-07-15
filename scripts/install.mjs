@@ -1,25 +1,34 @@
 #!/usr/bin/env node
 /**
- * HAC-91 full installer path.
+ * HAC-91 / HAC-170 installer path.
  *
  * Usage:
- *   npx @workspacejson/codex-mcp install
- *   node scripts/install.mjs
- *   node scripts/install.mjs --with-hook
- *   node scripts/install.mjs uninstall
+ *   npx @workspacejson/codex-mcp install                        # MCP context only
+ *   npx @workspacejson/codex-mcp install --with-hook            # + deterministic pre-edit hook
+ *   npx @workspacejson/codex-mcp install --with-extension       # + VS Code extension (explicit consent)
+ *   npx @workspacejson/codex-mcp install --full                 # = --with-hook --with-extension
+ *   npx @workspacejson/codex-mcp uninstall                      # remove repo-owned MCP/hook/runtime
+ *   npx @workspacejson/codex-mcp uninstall --with-extension     # also remove the global VS Code extension
  *
  * Writes [mcp_servers.workspacejson] to .codex/config.toml at the current repo
  * root, idempotently. With --with-hook, also appends a single PreToolUse hook
  * stanza for apply_patch. Never overwrites unrelated config.
+ *
+ * --with-extension is explicit consent to modify editor-global state. It is the
+ * ONLY path that installs the VS Code extension: no npm postinstall, package
+ * import, MCP startup, or ordinary install ever touches the editor. Missing the
+ * `code` CLI is UNAVAILABLE (with remediation), not a package failure, and any
+ * extension failure leaves the core MCP/hook install intact.
  *
  * When run without the "install" subcommand (or as the package binary), it
  * proxies to the built MCP server so the same package is both the server and
  * the installer.
  */
 
-import { existsSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readdirSync } from "node:fs";
 import { chmod, cp, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -40,6 +49,219 @@ const MCP_BLOCK = [
 
 const HOOK_MARKER = "# workspacejson-codex-mcp PreToolUse hook";
 const RUNTIME_MARKER = ".workspacejson-codex-mcp-owned";
+
+// ── VS Code extension distribution (HAC-170 Distribution & Installer Contract) ──
+// The extension is a separate editor artifact whose identity is stable product
+// identity, not something discovered at runtime. The VSIX filename encodes the
+// version and doubles as the ownership check.
+const EXTENSION_PUBLISHER = "workspacejson";
+const EXTENSION_NAME = "workspacejson-codex-decorations";
+const DEFAULT_EXTENSION_ID = `${EXTENSION_PUBLISHER}.${EXTENSION_NAME}`;
+const VSIX_PREFIX = `${EXTENSION_NAME}-`;
+const VSIX_SUFFIX = ".vsix";
+
+function extensionId() {
+  return process.env.WORKSPACEJSON_EXTENSION_ID?.trim() || DEFAULT_EXTENSION_ID;
+}
+
+// VS Code Stable is the supported target. We never silently pick between Stable,
+// Insiders, Cursor, remote, or a container CLI — the caller opts a different CLI
+// in explicitly through WORKSPACEJSON_CODE_CLI.
+function resolveCodeCli() {
+  const cli = process.env.WORKSPACEJSON_CODE_CLI?.trim() || "code";
+  const probe = spawnSync(cli, ["--version"], { encoding: "utf8", timeout: 15000 });
+  if (probe.error || probe.status !== 0) return { cli, available: false };
+  return { cli, available: true, version: (probe.stdout || "").split("\n")[0].trim() };
+}
+
+// Resolve the VSIX to install. Search order: dirs that exist both in a repo
+// checkout (extension/ after `npm run build:extension`) and in a published npm
+// tarball (vsix/). Ownership is enforced by the required filename shape.
+function findBundledVsix() {
+  const dirs = [resolve(packageRoot, "vsix"), packageRoot, resolve(packageRoot, "extension")];
+  const found = [];
+  for (const dir of dirs) {
+    let names = [];
+    try {
+      names = readdirSync(dir);
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      if (name.startsWith(VSIX_PREFIX) && name.endsWith(VSIX_SUFFIX)) found.push(resolve(dir, name));
+    }
+  }
+  if (found.length === 0) return null;
+  found.sort();
+  const path = found[found.length - 1];
+  return { path, version: vsixVersion(path) };
+}
+
+function vsixVersion(path) {
+  const base = basename(path);
+  if (!(base.startsWith(VSIX_PREFIX) && base.endsWith(VSIX_SUFFIX))) return null;
+  return base.slice(VSIX_PREFIX.length, base.length - VSIX_SUFFIX.length) || null;
+}
+
+// Parse `code --list-extensions --show-versions` into id(lowercased) -> version.
+// Returns null when the listing itself failed (distinct from "not installed").
+function listInstalledExtensions(cli) {
+  const res = spawnSync(cli, ["--list-extensions", "--show-versions"], { encoding: "utf8", timeout: 20000 });
+  if (res.error || res.status !== 0) return null;
+  const map = new Map();
+  for (const line of (res.stdout || "").split("\n")) {
+    const entry = line.trim();
+    if (!entry) continue;
+    const at = entry.lastIndexOf("@");
+    if (at > 0) map.set(entry.slice(0, at).toLowerCase(), entry.slice(at + 1));
+    else map.set(entry.toLowerCase(), null);
+  }
+  return map;
+}
+
+/**
+ * Idempotently install the VS Code extension with explicit consent.
+ * Returns a structured { status, lines, reloadRequired } where status is one of
+ * PASS | ALREADY_INSTALLED | UNAVAILABLE | FAILED. Never throws: the caller runs
+ * it after the core install so a failure here cannot roll back MCP/hook setup.
+ */
+function installExtensionArtifact({ vsix } = {}) {
+  const id = extensionId();
+  const { cli, available } = resolveCodeCli();
+  if (!available) {
+    return {
+      status: "UNAVAILABLE",
+      lines: [
+        `VS Code 'code' CLI not found (tried '${cli}').`,
+        "The extension was not installed; the MCP/hook install is unaffected.",
+        "Remediation:",
+        "  - Install VS Code Stable, then run 'Shell Command: Install code command in PATH'",
+        "    from the Command Palette so 'code' is available.",
+        "  - Or point WORKSPACEJSON_CODE_CLI at your editor's CLI, then rerun:",
+        "      npx -y @workspacejson/codex-mcp install --with-extension",
+      ],
+    };
+  }
+
+  const explicitVsix = vsix?.trim() || process.env.WORKSPACEJSON_EXTENSION_VSIX?.trim();
+  let source;
+  let sourceKind;
+  let expectedVersion = null;
+  if (explicitVsix) {
+    if (!existsSync(explicitVsix)) {
+      return {
+        status: "FAILED",
+        lines: [`Specified VSIX not found: ${explicitVsix}`, "The MCP/hook install is unaffected."],
+      };
+    }
+    if (!(basename(explicitVsix).startsWith(VSIX_PREFIX) && explicitVsix.endsWith(VSIX_SUFFIX))) {
+      return {
+        status: "FAILED",
+        lines: [
+          `Refusing to install unrecognized artifact '${basename(explicitVsix)}'.`,
+          `Expected ${VSIX_PREFIX}<version>${VSIX_SUFFIX}. The MCP/hook install is unaffected.`,
+        ],
+      };
+    }
+    source = explicitVsix;
+    sourceKind = "vsix";
+    expectedVersion = vsixVersion(explicitVsix);
+  } else {
+    const bundled = findBundledVsix();
+    if (bundled) {
+      source = bundled.path;
+      sourceKind = "vsix";
+      expectedVersion = bundled.version;
+    } else if (process.env.WORKSPACEJSON_EXTENSION_MARKETPLACE === "1") {
+      // Opt-in path for once the Marketplace listing is live and verified.
+      source = id;
+      sourceKind = "marketplace";
+    } else {
+      return {
+        status: "FAILED",
+        lines: [
+          "No extension VSIX was found to install.",
+          "Build it from a checkout of this repo:",
+          "    npm run build:extension",
+          "then rerun with --with-extension, or pass an explicit artifact:",
+          `    --vsix path/to/${VSIX_PREFIX}<version>${VSIX_SUFFIX}`,
+          "The MCP/hook install is unaffected.",
+        ],
+      };
+    }
+  }
+
+  const before = listInstalledExtensions(cli);
+  const current = before?.get(id.toLowerCase());
+  if (current != null && expectedVersion && current === expectedVersion) {
+    return {
+      status: "ALREADY_INSTALLED",
+      lines: [`${id}@${current} is already installed in '${cli}'. No action taken.`],
+    };
+  }
+
+  const install = spawnSync(cli, ["--install-extension", source, "--force"], { encoding: "utf8", timeout: 120000 });
+  if (install.error || install.status !== 0) {
+    return {
+      status: "FAILED",
+      lines: [
+        `Failed to install the extension via '${cli}'.`,
+        (install.stderr || install.stdout || install.error?.message || "").trim(),
+        "The MCP/hook install is unaffected.",
+      ].filter(Boolean),
+    };
+  }
+
+  const after = listInstalledExtensions(cli);
+  const now = after?.get(id.toLowerCase());
+  if (after && now === undefined) {
+    return {
+      status: "FAILED",
+      lines: [`'${cli} --install-extension' reported success but ${id} is not listed as installed.`],
+    };
+  }
+  const verb = current != null ? "Updated" : "Installed";
+  const provenance = sourceKind === "vsix" ? "bundled VSIX" : "Marketplace";
+  return {
+    status: "PASS",
+    reloadRequired: true,
+    lines: [
+      `${verb} ${id}${now ? `@${now}` : ""} in '${cli}' (${provenance}).`,
+      "Reload VS Code ('Developer: Reload Window') to activate it.",
+    ],
+  };
+}
+
+// Remove ONLY the owned extension by exact id. Unrelated extensions and editor
+// settings are never touched.
+function uninstallExtensionArtifact() {
+  const id = extensionId();
+  const { cli, available } = resolveCodeCli();
+  if (!available) {
+    return {
+      status: "UNAVAILABLE",
+      lines: [`VS Code 'code' CLI not found; the global extension ${id} was left untouched.`],
+    };
+  }
+  const res = spawnSync(cli, ["--uninstall-extension", id], { encoding: "utf8", timeout: 60000 });
+  if (res.error || res.status !== 0) {
+    return {
+      status: "FAILED",
+      lines: [`${id} was not removed (it may not be installed in '${cli}'). Unrelated extensions were preserved.`],
+    };
+  }
+  return {
+    status: "PASS",
+    lines: [`Removed the global extension ${id} from '${cli}'. Unrelated extensions were preserved.`],
+  };
+}
+
+function printExtensionResult(heading, result) {
+  console.log("");
+  console.log(heading);
+  for (const line of result.lines) console.log(`  ${line}`);
+  console.log(`  -> ${result.status}`);
+}
 
 function blockHasMarker(content, header, marker) {
   const lines = content.split("\n");
@@ -184,8 +406,9 @@ function addHookBlock(content, commandPath) {
   return `${content.trimEnd() + buildHookBlock(commandPath)}\n`;
 }
 
-async function runInstall() {
-  const withHook = process.argv.includes("--with-hook");
+async function runInstall(opts = {}) {
+  const withHook = Boolean(opts.withHook);
+  const withExtension = Boolean(opts.withExtension);
   const repoRoot = await findRepoRoot(process.cwd());
   const codexDir = resolve(repoRoot, ".codex");
   const configPath = resolve(codexDir, "config.toml");
@@ -215,6 +438,9 @@ async function runInstall() {
     await writeAtomic(managedMarkerPath, "owned by @workspacejson/codex-mcp\n");
   }
 
+  // Ensure the target directory exists for every install surface, not only
+  // --with-hook: a fresh repo has no .codex/ yet, and writeAtomic would ENOENT.
+  await mkdir(codexDir, { recursive: true });
   await writeAtomic(configPath, content);
   console.log(`Wrote ${configPath}`);
   console.log("");
@@ -232,9 +458,14 @@ async function runInstall() {
   console.log(
     "  Before editing or creating a file, call workspace_get_file_context on the target path to check fragility and co-change partners.",
   );
+
+  if (withExtension) {
+    printExtensionResult("VS Code extension (--with-extension):", installExtensionArtifact({ vsix: opts.vsix }));
+  }
 }
 
-async function runUninstall() {
+async function runUninstall(opts = {}) {
+  const withExtension = Boolean(opts.withExtension);
   const repoRoot = await findRepoRoot(process.cwd());
   const codexDir = resolve(repoRoot, ".codex");
   const configPath = resolve(codexDir, "config.toml");
@@ -242,20 +473,36 @@ async function runUninstall() {
   const ownsRuntime = existsSync(resolve(managedRoot, RUNTIME_MARKER));
 
   let content = "";
+  let configExisted = true;
   try {
     content = await readFile(configPath, "utf8");
   } catch (err) {
     if (err.code !== "ENOENT") throw err;
+    configExisted = false;
   }
 
   const ownsMcp = blockHasMarker(content, MCP_HEADER, MCP_MARKER);
   if (ownsMcp) content = removeTomlBlock(content, MCP_HEADER);
   content = removeManagedHook(content);
-  await writeAtomic(configPath, normalizeTomlEdges(content));
+  // Only touch config.toml when it exists; a never-installed repo has no .codex/
+  // and writing an empty file into it would both ENOENT and leave clutter.
+  if (configExisted) {
+    await writeAtomic(configPath, normalizeTomlEdges(content));
+    console.log(`Removed workspacejson configuration from ${configPath}`);
+    console.log("Unrelated Codex configuration was preserved.");
+  } else {
+    console.log(`No ${configPath} found; nothing to remove.`);
+  }
   if (ownsRuntime) await rm(managedRoot, { recursive: true, force: true });
 
-  console.log(`Removed workspacejson configuration from ${configPath}`);
-  console.log("Unrelated Codex configuration was preserved.");
+  if (withExtension) {
+    printExtensionResult("VS Code extension (--with-extension):", uninstallExtensionArtifact());
+  } else {
+    console.log("");
+    console.log(
+      "The global VS Code extension (if installed) was preserved. Remove it with: npx -y @workspacejson/codex-mcp uninstall --with-extension",
+    );
+  }
 }
 
 async function runServer() {
@@ -267,21 +514,52 @@ async function runReview(args) {
   process.exitCode = await runReviewerCli(args);
 }
 
+function parseArgs(argv) {
+  const opts = { command: null, withHook: false, withExtension: false, vsix: null };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--with-hook") opts.withHook = true;
+    else if (arg === "--with-extension") opts.withExtension = true;
+    else if (arg === "--full") {
+      opts.withHook = true;
+      opts.withExtension = true;
+    } else if (arg === "--vsix") opts.vsix = argv[++i] ?? null;
+    else if (arg.startsWith("--vsix=")) opts.vsix = arg.slice("--vsix=".length);
+    else if (!arg.startsWith("-") && opts.command === null) opts.command = arg;
+  }
+  if (opts.command === null) opts.command = "install";
+  return opts;
+}
+
+const USAGE = [
+  "Usage:",
+  "  install [--with-hook] [--with-extension] [--full] [--vsix <path>]",
+  "  uninstall [--with-extension]",
+  "  server",
+  "  review [--diff-stdin]",
+].join("\n");
+
 async function main() {
-  const args = process.argv.slice(2);
-  if (args.length === 0 || args[0] === "install" || (args[0] === "--with-hook" && args.length === 1)) {
-    await runInstall();
-  } else if (args[0] === "uninstall") {
-    await runUninstall();
-  } else if (args[0] === "server") {
+  const argv = process.argv.slice(2);
+  // server/review consume their own remaining args and never take install flags.
+  const reviewIndex = argv.indexOf("review");
+  if (argv.includes("server")) {
     await runServer();
-  } else if (args[0] === "review") {
-    await runReview(args.slice(1));
+    return;
+  }
+  if (reviewIndex !== -1) {
+    await runReview(argv.slice(reviewIndex + 1));
+    return;
+  }
+
+  const opts = parseArgs(argv);
+  if (opts.command === "install") {
+    await runInstall(opts);
+  } else if (opts.command === "uninstall") {
+    await runUninstall(opts);
   } else {
-    console.error("Unknown command:", args[0]);
-    console.error(
-      "Usage: node scripts/install.mjs [install] [--with-hook] | node scripts/install.mjs uninstall | node scripts/install.mjs server | node scripts/install.mjs review",
-    );
+    console.error("Unknown command:", opts.command);
+    console.error(USAGE);
     process.exit(1);
   }
 }

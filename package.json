@@ -34,9 +34,10 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "hooks", "scripts/install.mjs", ".codex-plugin", ".mcp.json", "README.md", "LICENSE"],
+  "files": ["dist", "hooks", "scripts/install.mjs", ".codex-plugin", ".mcp.json", "vsix", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
+    "build:extension": "npm --prefix extension ci && npm --prefix extension run package && mkdir -p vsix && cp extension/workspacejson-codex-decorations-*.vsix vsix/",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
@@ -50,7 +51,7 @@
     "pack:check": "npm pack --dry-run && npx publint",
     "check": "npm run check:structure && npm run typecheck && npm run lint && npm run build && npm run test && npm run smoke",
     "verify": "npm run check",
-    "prepublishOnly": "npm run check && npm run pack:check"
+    "prepublishOnly": "npm run check && npm run build:extension && npm run pack:check"
   },
   "engines": {
     "node": ">=20"

@@ -36,17 +36,21 @@
 npx @workspacejson/codex-mcp install --with-hook
 ```
 
-Installs:
-- MCP context
-- deterministic pre-edit hook
+That gives you MCP context **plus** the deterministic pre-edit hook — the enforcement shown in the 30-second demo above. It's idempotent, scoped to this repo's `.codex/` directory, and never touches `~/.codex`. Restart Codex, then run `/mcp` to confirm `workspacejson` is connected.
 
-Includes:
-- optional, read-only GPT-5.6 API reviewer
+**Add surfaces as you want them.** Each flag is additive and asks for exactly the consent it needs — nothing is installed silently:
 
-Idempotent, scoped to this repo's `.codex/` directory, never touches `~/.codex`. Restart Codex, then run `/mcp` to confirm `workspacejson` is connected. Remove everything it wrote with `npx @workspacejson/codex-mcp uninstall`.
+| Command | Adds | Touches |
+| --- | --- | --- |
+| `install` | MCP context (read tools) + optional GPT-5.6 reviewer | this repo's `.codex/` |
+| `install --with-hook` | + deterministic pre-edit hook | this repo's `.codex/` |
+| `install --with-extension` | + VS Code editor surface | your global VS Code (explicit consent) |
+| `install --full` | the hook **and** the extension | both |
+
+**Uninstall** mirrors that consent. `npx @workspacejson/codex-mcp uninstall` removes only what this repo owns — the MCP block, hook, and runtime — and **leaves your global VS Code extension in place**. To remove the editor extension too, ask for it explicitly: `npx @workspacejson/codex-mcp uninstall --with-extension`.
 
 <details>
-<summary>MCP-only setup, CI check, editor decorations, and manual verification</summary>
+<summary>MCP-only setup, CI check, the VS Code surface, and manual verification</summary>
 
 ### Wire the MCP server yourself
 
@@ -70,19 +74,32 @@ git diff --name-only | node hooks/pre-edit-check.mjs --paths-stdin
 
 Exit code 2 means a fragile change is missing a co-change partner; the reason prints with its evidence. Drop it into a GitHub Action to gate pull requests the same way the hook gates edits.
 
-### Editor decorations — VS Code / Cursor (optional)
+### VS Code editor surface (optional)
 
-Install the packaged extension from the release `.vsix`:
+Let the installer handle the `code` CLI, idempotency, and the reload prompt for you:
 
 ```bash
-# VS Code
-code --install-extension workspacejson-codex-<version>.vsix
-
-# Cursor
-cursor --install-extension workspacejson-codex-<version>.vsix
+npx @workspacejson/codex-mcp install --with-extension
 ```
 
-Fragile files are flagged in the Explorer with their tier and evidence on hover. The extension reads the same local `.agents/workspace.json`; it makes no network calls.
+This installs the `workspacejson.workspacejson-codex-decorations` extension: Explorer decorations on fragile files, a **current-change** view, a synchronized status item, and receipt-backed advisory review — all read from your local `.agents/workspace.json`, with no network calls and no telemetry.
+
+The installer targets **VS Code Stable** only. If the `code` CLI isn't on your PATH it reports `UNAVAILABLE` with a one-line fix and leaves your MCP/hook install untouched — it never silently targets Insiders, Cursor, a remote, or a container. To aim it at a different editor's CLI deliberately, set `WORKSPACEJSON_CODE_CLI` (e.g. `cursor`) and rerun.
+
+Building from a checkout of this repo? Produce the VSIX first, then install:
+
+```bash
+npm run build:extension
+npx @workspacejson/codex-mcp install --with-extension
+```
+
+Prefer to install a pinned VSIX by hand (offline, or a release artifact)?
+
+```bash
+code --install-extension workspacejson-codex-decorations-<version>.vsix
+```
+
+Demo and fixture repos may recommend the exact extension ID through `.vscode/extensions.json`; that's discovery only and never installs anything on its own.
 
 ### Verify in two minutes
 
@@ -109,6 +126,7 @@ Full derivation rules for evidence tiers (`ASSERTED`/`OBSERVED`/`VERIFIED`), the
 - Reviewer output never controls deterministic enforcement.
 - Installation never overwrites unmanaged configuration.
 - Uninstall removes only owned artifacts.
+- The editor extension installs only with explicit `--with-extension` consent.
 - Every `VERIFIED` claim maps to a reproducible command.
 
 Each is checkable, not asserted: run `npm run verify` from a clean clone to reproduce the gate this repository's own CI runs, or read the source citations in [`docs/operational-guarantees.md`](docs/operational-guarantees.md). See [`docs/failure-modes.md`](docs/failure-modes.md) for the behavior behind each guarantee under missing, malformed, or unavailable input.
@@ -129,7 +147,7 @@ The MCP and deterministic hook run locally over stdio and do not upload reposito
 ## Learn more
 
 - [How it works](docs/how-it-works.md) — evidence tiers, hook enforcement, GPT-5.6 reviewer
-- [Operational guarantees](docs/operational-guarantees.md) — the six promises above, with source citations
+- [Operational guarantees](docs/operational-guarantees.md) — the seven promises above, with source citations
 - [Failure modes](docs/failure-modes.md) — behavior under missing, malformed, or unavailable input
 - [Tools](docs/tools.md) — full MCP tool reference (`workspace_get_file_context`, `workspace_get_cochange_partners`, `workspace_list_fragile_files`, `workspace_assess_change`)
 - [The workspace.json contract](docs/workspace-contract.md) — fields consumed and normalization

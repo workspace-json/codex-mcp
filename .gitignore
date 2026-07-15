@@ -2,6 +2,9 @@ node_modules/
 dist/
 *.log
 .DS_Store
+# Built VS Code extension artifact; produced by `npm run build:extension`, shipped in the npm tarball, not source.
+vsix/
+*.vsix
 # Keep local narration sources, voices, and generated production assets out of this public repository.
 demo/
 
