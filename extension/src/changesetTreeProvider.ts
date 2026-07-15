@@ -50,7 +50,12 @@ function reviewIcon(node: PlainNode): vscode.ThemeIcon {
   if (node.id === "review") return new vscode.ThemeIcon("law", REVIEW_GOLD); // the REVIEW group header
   switch (node.reviewState) {
     case "PASS":
-      return new vscode.ThemeIcon("pass", OK); // green check; the PASS text stays neutral
+      // A shield, not a check. A check mark is the universal "approved" symbol,
+      // and this is the one row that structurally cannot approve anything — a
+      // check here reads as "cleared" against the governing DENY, i.e. mixed
+      // signals. A shield says "reviewed / weighed," not "cleared." The PASS
+      // text stays neutral and scope-bounded.
+      return new vscode.ThemeIcon("shield", OK);
     case "BLOCK":
     case "FAILED":
       return new vscode.ThemeIcon("error", SEVERITY_ERROR);
