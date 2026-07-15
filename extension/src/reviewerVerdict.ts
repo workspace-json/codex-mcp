@@ -68,7 +68,10 @@ export interface ReviewSummary {
 export type ReceiptLoad =
   | { kind: "none" }
   | { kind: "invalid"; reason: string }
-  | { kind: "ok"; verdict: ReviewerVerdict; receipt: ReviewerReceipt };
+  // `dir` is the directory the receipt was actually discovered in — the
+  // authoritative location for opening it, independent of any machine-specific
+  // absolute path a producer may (or may not) have written into verdict.json.
+  | { kind: "ok"; verdict: ReviewerVerdict; receipt: ReviewerReceipt; dir: string };
 
 const VERDICT_DIR = ".local/workspacejson/reviewer";
 
@@ -179,7 +182,10 @@ export async function loadLatestReceipt(rootPath: string): Promise<ReceiptLoad> 
   }
   if (!receipt) return { kind: "invalid", reason: "Receipt could not be validated" };
 
-  return { kind: "ok", verdict, receipt };
+  // Bind to the discovered directory, not verdict.artifactDir: the receipt is
+  // right here next to the verdict we just read, regardless of what path (if
+  // any) the producer recorded inside the file.
+  return { kind: "ok", verdict, receipt, dir: dirname(path) };
 }
 
 /**
@@ -206,7 +212,7 @@ export function summarizeReview(load: ReceiptLoad, changeset: ReadonlySet<string
     fresh,
     findings: verdict.findings,
     gaps: verdict.gaps,
-    artifactDir: verdict.artifactDir,
+    artifactDir: load.dir,
   };
   if (!fresh) base.detail = "change has moved";
   return base;

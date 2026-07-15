@@ -8,8 +8,9 @@ import { type ReceiptLoad, type ReviewerVerdict, loadLatestReceipt, summarizeRev
 function okLoad(verdict: "PASS" | "BLOCK", scopePaths: string[], extra: Partial<ReviewerVerdict> = {}): ReceiptLoad {
   return {
     kind: "ok",
-    verdict: { status: "COMPLETED", verdict, artifactDir: "", findings: [], evidence: [], checked: [], gaps: [], ...extra },
+    verdict: { status: "COMPLETED", verdict, artifactDir: "/producer/wrote/this", findings: [], evidence: [], checked: [], gaps: [], ...extra },
     receipt: { model: "gpt-5.6", scopePaths },
+    dir: "/discovered/run",
   };
 }
 
@@ -57,7 +58,17 @@ test("loadLatestReceipt: verdict with a model-attributed sibling receipt validat
     if (load.kind !== "ok") return;
     assert.equal(load.receipt.model, "gpt-5.6");
     assert.deepEqual(load.receipt.scopePaths, ["src/a.ts"]);
+    // The load binds to the directory the receipt was discovered in, so Inspect
+    // Receipt can open it even when verdict.json carries no (or a stale) artifactDir.
+    assert.equal(load.dir, join(root, SUBDIR, "run"));
   });
+});
+
+test("summarizeReview: artifactDir is the discovered dir, not the producer-written path", () => {
+  // okLoad's verdict.artifactDir is "/producer/wrote/this"; the summary must
+  // surface the discovered "/discovered/run" so Inspect Receipt opens the real file.
+  const summary = summarizeReview(okLoad("PASS", ["src/a.ts"]), new Set(["src/a.ts"]));
+  assert.equal(summary.artifactDir, "/discovered/run");
 });
 
 test("loadLatestReceipt: a verdict with no sibling receipt is invalid (missing model attribution)", async () => {

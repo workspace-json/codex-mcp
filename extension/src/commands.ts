@@ -112,14 +112,22 @@ export function registerCommands(model: WorkspaceIntelligenceModel, context: vsc
     const view = viewOf(model);
     const dir = view?.review.artifactDir;
     if (!dir) {
-      void vscode.window.showInformationMessage("workspace.json: no reviewer receipt has been produced yet.");
+      // HAC-108: what happened + the exact next step, as an action not prose.
+      const run = "Run Advisory Review";
+      const choice = await vscode.window.showInformationMessage(
+        "workspace.json: no reviewer receipt for the current change. Run an advisory review to produce one.",
+        run,
+      );
+      if (choice === run) await vscode.commands.executeCommand(COMMAND_IDS.runReview);
       return;
     }
     const receipt = vscode.Uri.joinPath(vscode.Uri.file(dir), "receipt.json");
     try {
       await vscode.window.showTextDocument(receipt);
     } catch {
-      void vscode.window.showWarningMessage("workspace.json: the reviewer receipt could not be opened.");
+      void vscode.window.showWarningMessage(
+        `workspace.json: the reviewer receipt could not be opened at ${dir}. It may have been moved or removed.`,
+      );
     }
   });
 }
