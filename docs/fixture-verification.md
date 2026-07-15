@@ -1,43 +1,42 @@
 # Checkout fixture verification
 
-Status: v2 reconstructed locally; not merged, published, or eligible for HAC-98.
+This public fixture is a small, controlled checkout scenario for reproducing
+the documented co-change behavior. It is not a production incident record.
 
-## v2 candidate
+## Frozen fixture
 
-- Repository: `workspace-json/codex-demo-fixture`
-- Local branch: `fixture-v2-reconstructed`, based on `main` commit
-  `366acf572e4fa943109d1307e19faeeecafb7921`.
-- Packet commit: `4ee7ed779de9e33f90b5302aa52a141e5f415429`.
-- Local-only annotated tag: `fixture-v2`.
-- Workspace artifact: `.agents/workspace.json`.
-- Workspace SHA-256:
-  `3dc5ebe2b82e5d6e8b7eae226554e4724cf41fec6f7d8c9d0095c51ac3f6e871`.
-- Node runtime: `v22.19.0`; focused command: `npm test`.
+- Repository: `workspace-json/codex-demo-fixture`.
+- Annotated tag and commit: [`fixture-v2`](https://github.com/workspace-json/codex-demo-fixture/tree/dc6f4d721affac96d517ca96cad8ccf8d9c15e3c)
+  → `dc6f4d721affac96d517ca96cad8ccf8d9c15e3c`.
+- Artifact: [`.agents/workspace.json`](https://github.com/workspace-json/codex-demo-fixture/blob/dc6f4d721affac96d517ca96cad8ccf8d9c15e3c/.agents/workspace.json).
+- Artifact Git blob: `a6807d3ad39aa3f3a1f3471c2ae1d4288f879149`.
+- Artifact SHA-256:
+  `5c97c81c8d6457e795c174d740026862512925cbf2efa9c66c1a18712285593d`.
 
-## Re-executed partner evidence
+The primary edit path is `src/routes/checkout.ts`; its recorded co-change
+partners are `src/auth/session.ts` and `src/lib/format.ts`.
 
-| Commit | State | Observed result |
-| --- | --- | --- |
-| `736887631fc8f411a8444de75ec9e10d1a4c8e7d` | Route-only money-object migration | Exit 1. Legacy session receives an object; USD becomes `$NaN` and JPY becomes USD/$NaN. |
-| `57c5b1f90d890790bd7eb7a0ecba1c6bfed1af43` | Route plus session, legacy formatter | Exit 1. Formatter fails with `Unsupported currency: undefined`. |
-| `d29d0e195acffb92f4ea880c08f7ca715d3f1a07` | Route, session, and formatter updated | Exit 0; both focused USD and JPY tests pass. |
+## Reproduce
 
-Full raw TAP output, command, Node version, exit status, and output hash are in
-the candidate fixture's `evidence/` directory. `scripts/regenerate-v2-proof.mjs`
-re-executes the three commits in detached worktrees and regenerates the packet.
+```sh
+git clone https://github.com/workspace-json/codex-demo-fixture.git
+cd codex-demo-fixture
+git switch --detach fixture-v2
+npm test
+```
 
-## History boundary
+The route-only regression commit
+`ca1f7ec8e124b4050deb5cd6d704bea0fe1dcee7` fails `npm test`. The corrective
+co-change commit `a9729be1486dc199adc1f42371847217cba9d883` and `fixture-v2`
+pass it.
 
-`fixture-v1`, including commits `90eee28` and `5707194`, remains unchanged and
-is cited only as the superseded route-regression experiment. v2 is a separate,
-append-only experiment; no v1 evidence is used in its artifact or README.
+## Spec compatibility
 
-## Remaining gates
+The plugin reads only `manual.fragileFiles`, `manual.coChangePatterns`,
+`generated.fileIndex`, and `generated.frameworkManifest` when present.
 
-- Reviewer cycle 1 BLOCKed on unsupported HAC-96 prompt/model assertions; the
-  candidate removed them. Reviewer cycle 2 PASSed with no blocking findings.
-- Review the candidate before any remote branch, tag, merge, or publication
-  action. No such decision is implied by this document.
-- HAC-96 must still run and preserve three identical unprotected Codex trials
-  with model/release/settings and omission rate.
-- HAC-98 remains unauthorized until reviewer cycle 2 passes on v2.
+The frozen artifact is a documented validate-and-warn case: with
+`@workspacejson/spec` v0.4.1, both `validate()` and `validateV4()` return
+`false`. The consumer still normalizes the locked paths, returning the checkout
+fragility record, both recorded partners, and an indexed primary path. This
+does not turn the validation discrepancy into an approval or safety claim.
