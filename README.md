@@ -82,7 +82,7 @@ Let the installer handle the `code` CLI, idempotency, and the reload prompt for 
 npx @workspacejson/codex-mcp install --with-extension
 ```
 
-This installs the `workspacejson.workspacejson-codex-decorations` extension: Explorer decorations on fragile files, a **current-change** view, a synchronized status item, and receipt-backed advisory review — all read from your local `.agents/workspace.json`, with no network calls and no telemetry.
+This installs the `workspace-json.workspacejson-codex-decorations` extension: Explorer decorations on fragile files, a **current-change** view, a synchronized status item, and receipt-backed advisory review — all read from your local `.agents/workspace.json`, with no network calls and no telemetry.
 
 The installer targets **VS Code Stable** only. If the `code` CLI isn't on your PATH it reports `UNAVAILABLE` with a one-line fix and leaves your MCP/hook install untouched — it never silently targets Insiders, Cursor, a remote, or a container. To aim it at a different editor's CLI deliberately, set `WORKSPACEJSON_CODE_CLI` (e.g. `cursor`) and rerun.
 

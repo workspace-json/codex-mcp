@@ -54,7 +54,7 @@ const RUNTIME_MARKER = ".workspacejson-codex-mcp-owned";
 // The extension is a separate editor artifact whose identity is stable product
 // identity, not something discovered at runtime. The VSIX filename encodes the
 // version and doubles as the ownership check.
-const EXTENSION_PUBLISHER = "workspacejson";
+const EXTENSION_PUBLISHER = "workspace-json";
 const EXTENSION_NAME = "workspacejson-codex-decorations";
 const DEFAULT_EXTENSION_ID = `${EXTENSION_PUBLISHER}.${EXTENSION_NAME}`;
 const VSIX_PREFIX = `${EXTENSION_NAME}-`;

@@ -175,7 +175,7 @@ const i = args.indexOf("--install-extension");
 if (i !== -1) {
   const base = args[i + 1].split("/").pop();
   const m = base.match(/^(.*)-([0-9][^-]*)\\.vsix$/);
-  const id = m ? "workspacejson." + m[1] : args[i + 1];
+  const id = m ? "workspace-json." + m[1] : args[i + 1];
   const ver = m ? m[2] : "9.9.9";
   const l = load().filter((e) => e.split("@")[0].toLowerCase() !== id.toLowerCase());
   l.push(id + "@" + ver);
@@ -195,7 +195,7 @@ if (u !== -1) {
 process.exit(1);
 `;
 
-const EXT_ID = "workspacejson.workspacejson-codex-decorations";
+const EXT_ID = "workspace-json.workspacejson-codex-decorations";
 
 describe("extension distribution (--with-extension)", () => {
   function scaffold(prefix: string) {

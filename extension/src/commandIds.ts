@@ -16,7 +16,7 @@ export const COMMAND_IDS = {
 } as const;
 
 /** The published walkthrough id: `<publisher>.<extension>#<walkthroughId>`. */
-export const WALKTHROUGH_ID = "workspacejson.workspacejson-codex-decorations#workspacejson.gettingStarted";
+export const WALKTHROUGH_ID = "workspace-json.workspacejson-codex-decorations#workspacejson.gettingStarted";
 
 /** Exactly the ids permitted inside a trusted MarkdownString tooltip (§4.3). */
 export const TRUSTED_TOOLTIP_COMMANDS: readonly string[] = [
