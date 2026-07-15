@@ -17,7 +17,6 @@
   ],
   "allowedRootDirectories": [
     ".agents",
-    ".claude",
     ".codex",
     ".codex-plugin",
     ".github",

@@ -17,3 +17,6 @@ hac120-desktop.png
 
 # Local Claude state is machine-specific, not product source.
 .claude/
+
+# Local Codex transcript-processing scratchwork may contain prompts and tool traces.
+/scripts/extract-session*.mjs
