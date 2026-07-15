@@ -2,7 +2,7 @@
   "name": "workspacejson-codex-decorations",
   "displayName": "workspace.json — Codex change intelligence",
   "description": "Surfaces recorded fragility, co-change partners, and receipt-backed advisory review for the file you are changing — Explorer decorations, a current-change view, and a status item, all read from your local .agents/workspace.json. No telemetry, no network.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "publisher": "workspacejson",
   "license": "Apache-2.0",
@@ -42,6 +42,6 @@
       ]
     }
   },
-  "scripts": { "build": "tsc -p tsconfig.json", "lint": "tsc -p tsconfig.json --noEmit", "test": "npm run build && node --test out/test/*.check.js", "package": "npm run build && vsce package --allow-missing-repository --out workspacejson-codex-decorations-0.0.1.vsix" },
+  "scripts": { "build": "tsc -p tsconfig.json", "lint": "tsc -p tsconfig.json --noEmit", "test": "npm run build && node --test out/test/*.check.js", "package": "npm run build && vsce package --allow-missing-repository" },
   "devDependencies": { "@types/node": "^22.0.0", "@types/vscode": "^1.85.0", "@vscode/vsce": "^3.6.0", "typescript": "^5.9.0" }
 }
