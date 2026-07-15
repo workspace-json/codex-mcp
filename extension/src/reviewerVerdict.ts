@@ -4,7 +4,8 @@ import { normalizeKey } from "./pathMatch.js";
 
 /**
  * A completed GPT-5.6 reviewer run leaves two sibling files in its artifact
- * directory (see src/reviewer.ts):
+ * directory (written by the repository's MCP-side reviewer, a separate package
+ * from this extension):
  *   - `verdict.json`  — the advisory verdict + what it checked / left as gaps
  *   - `receipt.json`  — the transport attribution (provider, endpoint, model)
  *                       and the reviewed scope (scopeHash + scopePaths)

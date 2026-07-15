@@ -36,6 +36,10 @@ function surfaces(change: Set<string>) {
     badge: omissionBadge(view)?.value,
     treeKinds: buildTree(view).map((n) => n.kind),
     role: (p: string) => changeRoleFor(snapshot, change, p)?.role,
+    deniedCount: (p: string) => {
+      const r = changeRoleFor(snapshot, change, p);
+      return r?.role === "denied" ? r.missingCount : undefined;
+    },
   };
 }
 
@@ -49,6 +53,8 @@ test("2 → 1 → covered stays coherent across status bar, tree badge, and Expl
   assert.equal(s.role(CHECKOUT), "denied");
   assert.equal(s.role(SESSION), "omitted");
   assert.equal(s.role(FORMAT), "omitted");
+  // The Explorer decoration's per-file count is the SAME number as the tree badge.
+  assert.equal(s.deniedCount(CHECKOUT), s.badge);
 
   // 1 omitted — include session.ts; it flips omitted → included, the count drops.
   s = surfaces(new Set([CHECKOUT, SESSION]));
@@ -57,6 +63,7 @@ test("2 → 1 → covered stays coherent across status bar, tree badge, and Expl
   assert.equal(s.badge, 1);
   assert.equal(s.role(SESSION), "included");
   assert.equal(s.role(FORMAT), "omitted");
+  assert.equal(s.deniedCount(CHECKOUT), s.badge);
 
   // covered — include format.ts; no more omissions, and no surface claims "safe".
   s = surfaces(new Set([CHECKOUT, SESSION, FORMAT]));

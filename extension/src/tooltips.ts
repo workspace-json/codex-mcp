@@ -117,6 +117,11 @@ export function reviewTooltip(view: IntelligenceView): string {
     case "BLOCK":
       lines.push("Advisory result: **BLOCK** within reviewed scope");
       break;
+    default:
+      // Defense-in-depth: an unreached ReviewState (e.g. UNKNOWN) must still
+      // render a result line, never an advisory block with a silent gap.
+      lines.push("Advisory result: unavailable.");
+      break;
   }
   for (const gap of review.gaps) lines.push(`Gap: ${gap}`);
 
