@@ -2,7 +2,7 @@
   "name": "workspacejson-codex-decorations",
   "displayName": "workspace.json — Codex change intelligence",
   "description": "Surfaces recorded fragility, co-change partners, and receipt-backed advisory review for the file you are changing — Explorer decorations, a current-change view, and a status item, all read from your local .agents/workspace.json. No telemetry, no network.",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": true,
   "publisher": "workspacejson",
   "license": "Apache-2.0",
@@ -32,7 +32,7 @@
         {
           "id": "workspacejson",
           "title": "workspace.json",
-          "icon": "media/workspacejson-view.svg"
+          "icon": "assets/icon.svg"
         }
       ]
     },
@@ -124,7 +124,7 @@
             "title": "Open the workspace.json intelligence view",
             "description": "Select the workspace.json icon in the Activity Bar. This view explains how repository evidence affects your current change, and the status bar mirrors the current deterministic decision.\n[Open Current Change](command:workspacejson.focusCurrentChange)",
             "media": {
-              "image": "media/walkthrough/find.svg",
+              "image": "assets/walkthrough/find.svg",
               "altText": "The workspace.json Activity Bar icon, the current-change tree, and the status-bar item."
             },
             "completionEvents": [
@@ -137,7 +137,7 @@
             "title": "See what the current change omitted",
             "description": "DENY comes from deterministic repository evidence. Partner files are not edited for you — they are shown so you can include them, verify they are unnecessary, or revise the change.\n[Inspect Current Evidence](command:workspacejson.inspectEvidence)",
             "media": {
-              "image": "media/walkthrough/decision.svg",
+              "image": "assets/walkthrough/decision.svg",
               "altText": "DENY on checkout.ts with two evidenced partners omitted."
             },
             "completionEvents": [
@@ -149,7 +149,7 @@
             "title": "Resolve the deterministic decision",
             "description": "As evidenced partners enter the change, every surface updates together: 2 omitted, then 1 omitted, then Partner set covered. Covered does not mean safe — run the repository's verification before treating the change as complete.\n[Run Verification](command:workspacejson.runVerification)",
             "media": {
-              "image": "media/walkthrough/resolve.svg",
+              "image": "assets/walkthrough/resolve.svg",
               "altText": "The 2 to 1 to covered transition, ending in 'Verification still required'."
             },
             "completionEvents": [
@@ -161,7 +161,7 @@
             "title": "Run an independent advisory review",
             "description": "GPT-5.6 reviews a bounded evidence bundle in a separate read-only session. Its result is advisory — it can surface additional risks or gaps, but it never overrides deterministic enforcement.\n[Run Advisory Review](command:workspacejson.runReview)",
             "media": {
-              "image": "media/walkthrough/review.svg",
+              "image": "assets/walkthrough/review.svg",
               "altText": "Deterministic decision DENY beside advisory result PASS within reviewed scope."
             },
             "completionEvents": [

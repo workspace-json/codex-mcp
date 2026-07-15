@@ -1,9 +1,0 @@
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Monochrome product glyph: braces embracing a w. Single-color strokes,
-       no <text>, no external resources; inherits VS Code's foreground. -->
-  <g stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M8.5 4C6.7 4 6.6 6.4 6.6 8.2 6.6 10.4 5 11 4 12 5 13 6.6 13.6 6.6 15.8 6.6 17.6 6.7 20 8.5 20" />
-    <path d="M15.5 4C17.3 4 17.4 6.4 17.4 8.2 17.4 10.4 19 11 20 12 19 13 17.4 13.6 17.4 15.8 17.4 17.6 17.3 20 15.5 20" />
-    <path d="M9.2 9.5 10.9 15 12 11.6 13.1 15 14.8 9.5" />
-  </g>
-</svg>

@@ -476,7 +476,7 @@ async function runInstall(opts = {}) {
     console.log("");
     console.log("Next:");
     console.log("  1. Reload VS Code if prompted.");
-    console.log("  2. Select the workspace.json icon in the Activity Bar (the { w } glyph).");
+    console.log("  2. Select the workspace.json icon in the Activity Bar (the { • } glyph).");
     console.log('  3. Follow the "workspace.json: Getting Started" walkthrough (opens on first install).');
     console.log("");
     console.log('  Reopen later: Command Palette → "workspace.json: Getting Started".');
