@@ -2,7 +2,7 @@
 
 > This audit records the 0.1.0 package named below. Its custom-agent reviewer
 > transport was superseded by HAC-102's direct API reviewer; do not use this
-> document as evidence for the 0.1.2 reviewer transport. A new packed-artifact
+> document as evidence for the current reviewer transport. A new packed-artifact
 > audit is required for that release.
 
 Date: 2026-07-13  

@@ -7,6 +7,6 @@ describe("published npx entrypoint", () => {
     const pkg = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8"));
 
     expect(pkg.bin["codex-mcp"]).toBe("scripts/install.mjs");
-    expect(pkg.bin["workspacejson-codex-mcp"]).toBe("scripts/install.mjs");
+    expect(Object.keys(pkg.bin)).toEqual(["codex-mcp"]);
   });
 });
