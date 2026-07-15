@@ -12,7 +12,11 @@ export const COMMAND_IDS = {
   inspectReceipt: "workspacejson.inspectReceipt",
   focusCurrentChange: "workspacejson.focusCurrentChange",
   openIntelligenceFile: "workspacejson.openIntelligenceFile",
+  openWalkthrough: "workspacejson.openWalkthrough",
 } as const;
+
+/** The published walkthrough id: `<publisher>.<extension>#<walkthroughId>`. */
+export const WALKTHROUGH_ID = "workspacejson.workspacejson-codex-decorations#workspacejson.gettingStarted";
 
 /** Exactly the ids permitted inside a trusted MarkdownString tooltip (§4.3). */
 export const TRUSTED_TOOLTIP_COMMANDS: readonly string[] = [

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { COMMAND_IDS } from "./commandIds.js";
+import { COMMAND_IDS, WALKTHROUGH_ID } from "./commandIds.js";
 import { CHANGESET_TREE_VIEW_ID } from "./changesetTreeProvider.js";
 import type { IntelligenceView } from "./semanticModel.js";
 import type { WorkspaceIntelligenceModel } from "./workspaceIntelligence.js";
@@ -41,6 +41,10 @@ export function registerCommands(model: WorkspaceIntelligenceModel, context: vsc
     await vscode.commands.executeCommand(`${CHANGESET_TREE_VIEW_ID}.focus`);
   });
 
+  register(COMMAND_IDS.openWalkthrough, async () => {
+    await vscode.commands.executeCommand("workbench.action.openWalkthrough", WALKTHROUGH_ID, false);
+  });
+
   register(COMMAND_IDS.openFile, async (arg?: unknown) => {
     const uri = arg instanceof vscode.Uri ? arg : undefined;
     if (uri) await vscode.commands.executeCommand("vscode.open", uri);
@@ -78,7 +82,7 @@ export function registerCommands(model: WorkspaceIntelligenceModel, context: vsc
         channel.appendLine(`${file.path} · tier ${file.file.tier}`);
         if (file.file.reason) channel.appendLine(`  reason: ${file.file.reason}`);
         for (const claim of file.file.evidenceClaims) channel.appendLine(`  evidence: ${claim}`);
-        for (const partner of file.missingPartners) channel.appendLine(`  absent partner: ${partner}`);
+        for (const partner of file.missingPartners) channel.appendLine(`  omitted partner: ${partner}`);
         channel.appendLine("");
       }
     }

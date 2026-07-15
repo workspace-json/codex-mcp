@@ -1,0 +1,22 @@
+<svg width="640" height="360" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, Menlo, Consolas, monospace">
+  <rect x="0" y="0" width="640" height="360" rx="10" fill="#1e1e1e"/>
+  <text x="40" y="52" fill="#bbbbbb" font-size="13" letter-spacing="1">EVERY SURFACE UPDATES TOGETHER</text>
+  <!-- state 1 -->
+  <rect x="40" y="80" width="170" height="150" rx="8" fill="#2a1f1f" stroke="#f14c4c" stroke-width="1.5"/>
+  <text x="125" y="150" fill="#f14c4c" font-size="34" text-anchor="middle">2</text>
+  <text x="125" y="180" fill="#d69a9a" font-size="13" text-anchor="middle">omitted</text>
+  <text x="228" y="162" fill="#6f6f6f" font-size="26">→</text>
+  <!-- state 2 -->
+  <rect x="255" y="80" width="170" height="150" rx="8" fill="#2a2415" stroke="#cca700" stroke-width="1.5"/>
+  <text x="340" y="150" fill="#cca700" font-size="34" text-anchor="middle">1</text>
+  <text x="340" y="180" fill="#cbb56a" font-size="13" text-anchor="middle">omitted</text>
+  <text x="443" y="162" fill="#6f6f6f" font-size="26">→</text>
+  <!-- state 3 -->
+  <rect x="470" y="80" width="170" height="150" rx="8" fill="#1e2a1e" stroke="#89d185" stroke-width="1.5"/>
+  <text x="555" y="146" fill="#89d185" font-size="26" text-anchor="middle">✓</text>
+  <text x="555" y="176" fill="#a9d9a2" font-size="12" text-anchor="middle">Partner set</text>
+  <text x="555" y="194" fill="#a9d9a2" font-size="12" text-anchor="middle">covered</text>
+  <rect x="40" y="262" width="600" height="74" rx="6" fill="#2d2d2d"/>
+  <text x="60" y="292" fill="#e0c14c" font-size="14">Covered does not mean safe.</text>
+  <text x="60" y="316" fill="#c9c9c9" font-size="13">Run the repository's verification before treating the change as complete.</text>
+</svg>

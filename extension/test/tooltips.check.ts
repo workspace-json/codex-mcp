@@ -94,7 +94,8 @@ test("reviewTooltip: PASS is presented as scope-bounded, never an unqualified pa
   const md = reviewTooltip(view(AVAILABLE, new Set(["a.ts"]), review));
   assert.match(md, /Advisory result: \*\*PASS within reviewed scope\*\*/);
   assert.match(md, /Scope: 1 path · Fresh/);
-  assert.match(md, /Gap: no test evidence/);
+  // The gap gets its own labelled block, never trailing the result line.
+  assert.match(md, /\nGap:\n- no test evidence/);
   assertNoProhibited(md);
 });
 
@@ -129,4 +130,17 @@ test("statusText: an unavailable source reports unavailable, never a fabricated 
   const failed: SourceState = { path: ".agents/workspace.json", availability: "FAILED", error: "malformed" };
   assert.equal(statusText(view(failed, undefined, NO_REVIEW)), "$(question) workspace.json · unavailable");
   assertNoProhibited(statusTooltip(view(failed, undefined, NO_REVIEW)));
+});
+
+test("statusTooltip: DENY lists partners in natural language — no '(s)', no 'absent', scoped advisory", () => {
+  const passReview: ReviewSummary = { state: "PASS", verdict: "PASS", model: "gpt-5.6", reviewedCount: 1, fresh: true, findings: [], gaps: [] };
+  const md = statusTooltip(view(AVAILABLE, new Set(["a.ts"]), passReview));
+  assert.match(md, /Decision: \*\*DENY\*\*/);
+  assert.match(md, /1 evidenced partner omitted/);
+  assert.match(md, /- `b\.ts`/); // the omitted partner is listed
+  assert.doesNotMatch(md, /\babsent\b/i);
+  assert.doesNotMatch(md, /omission\(s\)/);
+  assert.match(md, /Advisory review: \*\*PASS within scope\*\*/);
+  assert.match(md, /Model: `gpt-5\.6` · Fresh/);
+  assertNoProhibited(md);
 });

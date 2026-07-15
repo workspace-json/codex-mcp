@@ -179,3 +179,21 @@ export function buildChangeNodes(view: IntelligenceView): PlainNode[] {
 export function buildTree(view: IntelligenceView): PlainNode[] {
   return [...buildChangeNodes(view), reviewNode(view)];
 }
+
+/**
+ * Coarse view state driving native `viewsWelcome` empty-state content and the
+ * `workspacejsonCodex.viewState` context key. Only "active" renders the tree;
+ * the other three states hand the empty view to a welcome message so a new or
+ * returning user gets guidance instead of a bare "unavailable" row. Reviewer
+ * availability deliberately does NOT empty the view — deterministic assessment
+ * stays visible even when the advisory reviewer is unavailable.
+ */
+export type ViewState = "malformed" | "noEvidence" | "noChange" | "active";
+
+export function viewStateFor(view: IntelligenceView): ViewState {
+  if (view.source.availability === "FAILED") return "malformed";
+  if (view.source.availability !== "AVAILABLE") return "noEvidence";
+  if (!view.currentChange.changesetKnown) return "noChange";
+  if (view.currentChange.decision === "IDLE") return "noChange";
+  return "active";
+}

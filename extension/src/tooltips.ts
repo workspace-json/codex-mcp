@@ -123,7 +123,11 @@ export function reviewTooltip(view: IntelligenceView): string {
       lines.push("Advisory result: unavailable.");
       break;
   }
-  for (const gap of review.gaps) lines.push(`Gap: ${gap}`);
+  // Gaps get their own labelled block so they never run into the result line.
+  if (review.gaps.length > 0) {
+    lines.push("", review.gaps.length === 1 ? "Gap:" : "Gaps:");
+    for (const gap of review.gaps) lines.push(`- ${gap}`);
+  }
 
   // 3. Attribution: model, scope, freshness. No scope-id hash here (§ receipt).
   if (review.model) {
@@ -173,16 +177,42 @@ export function statusTooltip(view: IntelligenceView): string {
   else {
     lines.push(`Decision: **${currentChange.decision}**`);
     if (currentChange.decision === "DENY") {
-      lines.push("", `${currentChange.missingCount} evidenced partner omission(s):`);
+      const n = currentChange.missingCount;
+      // Natural language: no "(s)", no "absent" — the partner files exist, they
+      // are omitted from the current change. List them under their fragile file.
+      lines.push(`${n} evidenced ${n === 1 ? "partner" : "partners"} omitted`);
       for (const file of currentChange.files) {
-        lines.push(`- \`${file.path}\` — ${file.missingPartners.length} absent`);
+        lines.push("", `\`${file.path}\``);
+        for (const partner of file.missingPartners) lines.push(`- \`${partner}\``);
       }
     } else if (currentChange.decision === "PARTNER_SET_COVERED") {
       lines.push("", "Recorded partner set covered. **Verification is still required.**");
     }
   }
 
-  lines.push("", "---", "", `Advisory review: **${review.state}**`);
-  if (review.model) lines.push(`Model: \`${review.model}\``);
+  lines.push("", "---", "", `Advisory review: **${reviewStateShort(review)}**`);
+  if (review.model) {
+    const freshness =
+      review.state === "UNAVAILABLE" || review.state === "FAILED" ? "Unavailable" : review.fresh ? "Fresh" : "Stale";
+    lines.push(`Model: \`${review.model}\` · ${freshness}`);
+  }
   return lines.join("\n");
+}
+
+/** Short advisory-state label for the status tooltip; PASS/BLOCK carry the scope boundary. */
+function reviewStateShort(review: IntelligenceView["review"]): string {
+  switch (review.state) {
+    case "PASS":
+      return "PASS within scope";
+    case "BLOCK":
+      return "BLOCK within scope";
+    case "NOT_RUN":
+      return "not run";
+    case "RUNNING":
+      return "reviewing";
+    case "STALE":
+      return "stale";
+    default:
+      return "unavailable";
+  }
 }

@@ -1,0 +1,19 @@
+<svg width="640" height="360" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, Menlo, Consolas, monospace">
+  <rect x="0" y="0" width="640" height="360" rx="10" fill="#1e1e1e"/>
+  <text x="40" y="56" fill="#bbbbbb" font-size="13" letter-spacing="1">WORKSPACE.JSON</text>
+  <text x="200" y="56" fill="#7a7a7a" font-size="13">current change</text>
+  <g font-size="18">
+    <text x="40" y="118" fill="#f14c4c">✕  DENY · checkout.ts</text>
+    <text x="300" y="118" fill="#6f6f6f" font-size="13">src/routes</text>
+  </g>
+  <text x="72" y="158" fill="#9d9d9d" font-size="15">2 evidenced partners omitted</text>
+  <g font-size="16">
+    <text x="104" y="196" fill="#cca700">○  session.ts</text>
+    <text x="270" y="196" fill="#6f6f6f" font-size="13">src/auth · omitted</text>
+    <text x="104" y="230" fill="#cca700">○  format.ts</text>
+    <text x="270" y="230" fill="#6f6f6f" font-size="13">src/lib · omitted</text>
+  </g>
+  <rect x="40" y="270" width="560" height="66" rx="6" fill="#2d2d2d"/>
+  <text x="58" y="298" fill="#c9c9c9" font-size="13">The partner files exist. They are omitted from the current change —</text>
+  <text x="58" y="320" fill="#c9c9c9" font-size="13">include them, verify they are unnecessary, or revise the change.</text>
+</svg>

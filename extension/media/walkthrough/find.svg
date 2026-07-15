@@ -1,0 +1,32 @@
+<svg width="640" height="360" viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" font-family="ui-monospace, Menlo, Consolas, monospace">
+  <rect x="0" y="0" width="640" height="360" rx="10" fill="#1e1e1e"/>
+  <!-- Activity Bar rail -->
+  <rect x="0" y="0" width="56" height="360" rx="10" fill="#333333"/>
+  <rect x="0" y="150" width="3" height="40" fill="#0e639c"/>
+  <g stroke="#e6e6e6" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(16,158)">
+    <path d="M6 0C3 0 3 4 3 6 3 9 0 10 0 12 0 14 3 15 3 18 3 20 3 24 6 24"/>
+    <path d="M18 0C21 0 21 4 21 6 21 9 24 10 24 12 24 14 21 15 21 18 21 20 21 24 18 24"/>
+    <path d="M8 8 11 18 12 13 13 18 16 8"/>
+  </g>
+  <!-- View panel -->
+  <text x="80" y="40" fill="#bbbbbb" font-size="13" letter-spacing="1">WORKSPACE.JSON</text>
+  <text x="230" y="40" fill="#7a7a7a" font-size="13">current change</text>
+  <circle cx="470" cy="35" r="11" fill="#0e639c"/>
+  <text x="470" y="40" fill="#ffffff" font-size="13" text-anchor="middle">2</text>
+  <g font-size="14">
+    <text x="80" y="80" fill="#f14c4c">✕  DENY · checkout.ts</text>
+    <text x="300" y="80" fill="#6f6f6f" font-size="12">src/routes</text>
+    <text x="104" y="108" fill="#9d9d9d">2 evidenced partners omitted</text>
+    <text x="128" y="136" fill="#cca700">○ session.ts</text>
+    <text x="260" y="136" fill="#6f6f6f" font-size="12">src/auth · omitted</text>
+    <text x="128" y="164" fill="#cca700">○ format.ts</text>
+    <text x="260" y="164" fill="#6f6f6f" font-size="12">src/lib · omitted</text>
+    <text x="80" y="196" fill="#d4b106">⚖  REVIEW</text>
+    <text x="104" y="224" fill="#89d185">✓ Advisory review · PASS within scope</text>
+  </g>
+  <!-- Status bar -->
+  <rect x="0" y="326" width="640" height="34" rx="0" fill="#007acc"/>
+  <rect x="0" y="350" width="640" height="10" fill="#007acc"/>
+  <text x="16" y="348" fill="#ffffff" font-size="13">✕ workspace.json · 2 omitted</text>
+  <text x="470" y="348" fill="#d6ecff" font-size="12">↑ mirrors the current decision</text>
+</svg>

@@ -3,7 +3,7 @@ import test from "node:test";
 import type { FragileFileIntelligence, IntelligenceSnapshot } from "../src/parseSnapshot.js";
 import type { ReviewState, ReviewSummary } from "../src/reviewerVerdict.js";
 import { type SourceState, deriveView } from "../src/semanticModel.js";
-import { type PlainNode, buildChangeNodes, buildTree, omissionBadge, reviewLabel } from "../src/treeModel.js";
+import { type PlainNode, buildChangeNodes, buildTree, omissionBadge, reviewLabel, viewStateFor } from "../src/treeModel.js";
 
 const PROHIBITED = ["SAFE", "ALL CLEAR", "APPROVED", "GUARANTEED", "REQUIRED FILES"];
 const AVAILABLE: SourceState = { path: ".agents/workspace.json", availability: "AVAILABLE" };
@@ -47,6 +47,17 @@ test("DENY change renders a decision row → a causal omission line → an omitt
   // "omitted", never "absent": the file exists, it is just not in the change.
   assert.match(partner?.description ?? "", /omitted$/);
   assert.doesNotMatch(partner?.description ?? "", /absent/);
+});
+
+test("viewStateFor: availability and change map to the right welcome/active state", () => {
+  const snap = snapshotWith([fragile("a.ts", ["b.ts"])]);
+  const failed: SourceState = { path: ".agents/workspace.json", availability: "FAILED", error: "malformed" };
+  const gone: SourceState = { path: ".agents/workspace.json", availability: "UNAVAILABLE" };
+  assert.equal(viewStateFor(viewFor(failed, snap, new Set(["a.ts"]))), "malformed");
+  assert.equal(viewStateFor(viewFor(gone, snap, new Set(["a.ts"]))), "noEvidence");
+  assert.equal(viewStateFor(viewFor(AVAILABLE, snap, new Set())), "noChange"); // available, nothing changed
+  assert.equal(viewStateFor(viewFor(AVAILABLE, snap, undefined)), "noChange"); // git unknown
+  assert.equal(viewStateFor(viewFor(AVAILABLE, snap, new Set(["a.ts"]))), "active"); // DENY
 });
 
 test("covered state always carries the verification requirement (§4.2, §9)", () => {

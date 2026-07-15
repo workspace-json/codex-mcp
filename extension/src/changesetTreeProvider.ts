@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import type { ChangesetFile } from "./changesetLogic.js";
 import { COMMAND_IDS, TRUSTED_TOOLTIP_COMMANDS } from "./commandIds.js";
 import type { IntelligenceView } from "./semanticModel.js";
-import { type PlainNode, buildTree, omissionBadge } from "./treeModel.js";
+import { type PlainNode, buildTree, omissionBadge, viewStateFor } from "./treeModel.js";
 import { coveredTooltip, decisionTooltip, partnerTooltip, reviewTooltip } from "./tooltips.js";
 import type { WorkspaceIntelligenceModel } from "./workspaceIntelligence.js";
 
@@ -151,7 +151,9 @@ export class ChangesetTreeProvider implements vscode.TreeDataProvider<PlainNode>
   getChildren(node?: PlainNode): PlainNode[] {
     if (!node) {
       const view = this.currentView();
-      return view ? buildTree(view) : [];
+      if (!view) return [];
+      // A non-active state hands the empty view to native viewsWelcome content.
+      return viewStateFor(view) === "active" ? buildTree(view) : [];
     }
     return node.children ?? [];
   }
@@ -175,12 +177,20 @@ export function registerChangesetTreeProvider(
     showCollapseAll: false,
   });
 
-  const syncBadge = () => {
+  const sync = () => {
     const folder = vscode.workspace.workspaceFolders?.[0];
-    treeView.badge = folder ? (omissionBadge(model.getView(folder)) ?? undefined) : undefined;
+    const view = folder ? model.getView(folder) : undefined;
+    // The Activity Bar badge is the deterministic omission count and nothing else.
+    treeView.badge = view ? (omissionBadge(view) ?? undefined) : undefined;
+    // Drive native viewsWelcome empty states off one context key.
+    void vscode.commands.executeCommand(
+      "setContext",
+      "workspacejsonCodex.viewState",
+      view ? viewStateFor(view) : "noEvidence",
+    );
   };
-  syncBadge();
+  sync();
 
-  context.subscriptions.push(treeView, provider, model.onDidChangeIntelligence(syncBadge));
+  context.subscriptions.push(treeView, provider, model.onDidChangeIntelligence(sync));
   return treeView;
 }

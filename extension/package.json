@@ -2,7 +2,7 @@
   "name": "workspacejson-codex-decorations",
   "displayName": "workspace.json — Codex change intelligence",
   "description": "Surfaces recorded fragility, co-change partners, and receipt-backed advisory review for the file you are changing — Explorer decorations, a current-change view, and a status item, all read from your local .agents/workspace.json. No telemetry, no network.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": true,
   "publisher": "workspacejson",
   "license": "Apache-2.0",
@@ -81,6 +81,11 @@
         "command": "workspacejson.openFile",
         "title": "Open File",
         "category": "workspace.json"
+      },
+      {
+        "command": "workspacejson.openWalkthrough",
+        "title": "Getting Started",
+        "category": "workspace.json"
       }
     ],
     "menus": {
@@ -90,7 +95,82 @@
           "when": "false"
         }
       ]
-    }
+    },
+    "viewsWelcome": [
+      {
+        "view": "workspacejsonCodexChangeset",
+        "when": "workspacejsonCodex.viewState == noEvidence",
+        "contents": "No `.agents/workspace.json` was found.\n\nworkspace.json provides portable repository evidence for the file you are changing.\n\n[Open workspace.json](command:workspacejson.openIntelligenceFile)\n[Getting Started](command:workspacejson.openWalkthrough)"
+      },
+      {
+        "view": "workspacejsonCodexChangeset",
+        "when": "workspacejsonCodex.viewState == noChange",
+        "contents": "No current change to assess.\n\nEdit or stage a repository file to see deterministic partner and fragility evidence here.\n\n[Getting Started](command:workspacejson.openWalkthrough)"
+      },
+      {
+        "view": "workspacejsonCodexChangeset",
+        "when": "workspacejsonCodex.viewState == malformed",
+        "contents": "`.agents/workspace.json` could not be read.\n\nDeterministic assessment is unavailable until the file is corrected.\n\n[Open workspace.json](command:workspacejson.openIntelligenceFile)"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "workspacejson.gettingStarted",
+        "title": "workspace.json: Getting Started",
+        "description": "Find the current-change intelligence view, read the deterministic decision, resolve it, and use advisory review.",
+        "steps": [
+          {
+            "id": "find",
+            "title": "Open the workspace.json intelligence view",
+            "description": "Select the workspace.json icon in the Activity Bar. This view explains how repository evidence affects your current change, and the status bar mirrors the current deterministic decision.\n[Open Current Change](command:workspacejson.focusCurrentChange)",
+            "media": {
+              "image": "media/walkthrough/find.svg",
+              "altText": "The workspace.json Activity Bar icon, the current-change tree, and the status-bar item."
+            },
+            "completionEvents": [
+              "onView:workspacejsonCodexChangeset",
+              "onCommand:workspacejson.focusCurrentChange"
+            ]
+          },
+          {
+            "id": "decision",
+            "title": "See what the current change omitted",
+            "description": "DENY comes from deterministic repository evidence. Partner files are not edited for you — they are shown so you can include them, verify they are unnecessary, or revise the change.\n[Inspect Current Evidence](command:workspacejson.inspectEvidence)",
+            "media": {
+              "image": "media/walkthrough/decision.svg",
+              "altText": "DENY on checkout.ts with two evidenced partners omitted."
+            },
+            "completionEvents": [
+              "onCommand:workspacejson.inspectEvidence"
+            ]
+          },
+          {
+            "id": "resolve",
+            "title": "Resolve the deterministic decision",
+            "description": "As evidenced partners enter the change, every surface updates together: 2 omitted, then 1 omitted, then Partner set covered. Covered does not mean safe — run the repository's verification before treating the change as complete.\n[Run Verification](command:workspacejson.runVerification)",
+            "media": {
+              "image": "media/walkthrough/resolve.svg",
+              "altText": "The 2 to 1 to covered transition, ending in 'Verification still required'."
+            },
+            "completionEvents": [
+              "onCommand:workspacejson.runVerification"
+            ]
+          },
+          {
+            "id": "review",
+            "title": "Run an independent advisory review",
+            "description": "GPT-5.6 reviews a bounded evidence bundle in a separate read-only session. Its result is advisory — it can surface additional risks or gaps, but it never overrides deterministic enforcement.\n[Run Advisory Review](command:workspacejson.runReview)",
+            "media": {
+              "image": "media/walkthrough/review.svg",
+              "altText": "Deterministic decision DENY beside advisory result PASS within reviewed scope."
+            },
+            "completionEvents": [
+              "onCommand:workspacejson.runReview"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
