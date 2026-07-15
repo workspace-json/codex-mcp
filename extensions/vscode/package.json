@@ -1,7 +1,7 @@
 {
   "name": "workspacejson-codex-decorations",
   "displayName": "workspace.json Codex Decorations",
-  "description": "Local Explorer decorations for fragile files recorded in .agents/workspace.json.",
+  "description": "In-window Explorer decorations and hover detail for fragile files recorded in .agents/workspace.json.",
   "version": "0.0.1",
   "private": true,
   "publisher": "workspacejson",
