@@ -8,20 +8,27 @@ import type { WorkspaceIntelligenceModel } from "./workspaceIntelligence.js";
 
 export const CHANGESET_TREE_VIEW_ID = "workspacejsonCodexChangeset";
 
-/** Native ThemeIcons only (§3.3). Decision severity is the dominant axis; absence is a hollow circle, not an arrow (§4.2). */
+// Decision severity is the dominant, action-oriented axis and carries a theme
+// color (§3.1 "DENY: error/red icon"). Evidence strength and availability stay
+// subordinate — absence is a neutral hollow circle, never a danger color (§3.1,
+// §4.2). Color is one signal among glyph + label, never the only distinction.
+const SEVERITY_ERROR = new vscode.ThemeColor("problemsErrorIcon.foreground");
+const SEVERITY_INFO = new vscode.ThemeColor("problemsInfoIcon.foreground");
+
 function iconFor(node: PlainNode): vscode.ThemeIcon | undefined {
   switch (node.kind) {
     case "decisionFile":
-      return new vscode.ThemeIcon("error");
+      return new vscode.ThemeIcon("error", SEVERITY_ERROR);
     case "partner":
       return new vscode.ThemeIcon("circle-outline");
     case "covered":
-      return new vscode.ThemeIcon("checklist");
+      return new vscode.ThemeIcon("check");
     case "annotate":
+      return new vscode.ThemeIcon("info", SEVERITY_INFO);
     case "idle":
       return new vscode.ThemeIcon("info");
     case "sourceFailed":
-      return new vscode.ThemeIcon("error");
+      return new vscode.ThemeIcon("error", SEVERITY_ERROR);
     case "sourceUnavailable":
       return new vscode.ThemeIcon("cloud-offline");
     case "changeUnknown":
@@ -40,7 +47,7 @@ function reviewIcon(node: PlainNode): vscode.ThemeIcon {
       return new vscode.ThemeIcon("pass");
     case "BLOCK":
     case "FAILED":
-      return new vscode.ThemeIcon("error");
+      return new vscode.ThemeIcon("error", SEVERITY_ERROR);
     case "STALE":
       return new vscode.ThemeIcon("history");
     case "RUNNING":

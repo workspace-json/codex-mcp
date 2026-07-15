@@ -2,7 +2,7 @@
   "name": "workspacejson-codex-decorations",
   "displayName": "workspace.json — Codex change intelligence",
   "description": "Surfaces recorded fragility, co-change partners, and receipt-backed advisory review for the file you are changing — Explorer decorations, a current-change view, and a status item, all read from your local .agents/workspace.json. No telemetry, no network.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": true,
   "publisher": "workspacejson",
   "license": "Apache-2.0",
