@@ -1,0 +1,16 @@
+{
+  "name": "workspacejson-codex-decorations",
+  "displayName": "workspace.json Codex Decorations",
+  "description": "Local Explorer decorations for fragile files recorded in .agents/workspace.json.",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "workspacejson",
+  "license": "Apache-2.0",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "main": "./out/src/extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": { "configuration": { "title": "workspace.json Codex Decorations", "properties": { "workspacejsonCodex.decorations.enabled": { "type": "boolean", "default": true, "description": "Show Explorer badges for files marked fragile in .agents/workspace.json." } } } },
+  "scripts": { "build": "tsc -p tsconfig.json", "test": "npm run build && node --test out/test/*.check.js", "package": "npm run build && vsce package --allow-missing-repository --out workspacejson-codex-decorations-0.0.1.vsix" },
+  "devDependencies": { "@types/node": "^22.0.0", "@types/vscode": "^1.85.0", "@vscode/vsce": "^3.6.0", "typescript": "^5.9.0" }
+}
