@@ -4,6 +4,7 @@ import { type IntelligenceSnapshot, type FragileFileIntelligence, parseSnapshot 
 import { relativeWorkspacePath } from "./pathMatch.js";
 import { subscribeChangeset, type Changeset } from "./gitChangeset.js";
 import { findLatestVerdict, type ReviewerVerdict } from "./reviewerVerdict.js";
+import { refreshVerdict } from "./verdictRefresh.js";
 
 export type { FragileFileIntelligence } from "./parseSnapshot.js";
 
@@ -127,7 +128,6 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     if (!snapshot) console.debug(`[workspace.json intelligence] present but malformed, treating as unavailable: ${artifact.fsPath}`);
     this.snapshots.set(key, snapshot);
     await this.loadVerdict(folder);
-    this.emitter.fire();
   }
 
   private onChangeset(folder: vscode.WorkspaceFolder, paths: Changeset): void {
@@ -137,12 +137,19 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
 
   async loadVerdict(folder: vscode.WorkspaceFolder): Promise<void> {
     const key = folder.uri.toString();
-    try {
-      this.verdicts.set(key, await findLatestVerdict(folder.uri.fsPath));
-    } catch (err) {
-      console.debug("[workspace.json intelligence] verdict discovery failed", err);
-      this.verdicts.set(key, undefined);
-    }
+    await refreshVerdict(
+      folder.uri.fsPath,
+      async (rootPath) => {
+        try {
+          return await findLatestVerdict(rootPath);
+        } catch (err) {
+          console.debug("[workspace.json intelligence] verdict discovery failed", err);
+          throw err;
+        }
+      },
+      (verdict) => this.verdicts.set(key, verdict),
+      () => this.emitter.fire(),
+    );
   }
 
   getSnapshot(folder: vscode.WorkspaceFolder): IntelligenceSnapshot | undefined {

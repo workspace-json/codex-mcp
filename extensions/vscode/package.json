@@ -9,7 +9,7 @@
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
   "main": "./out/src/extension.js",
-  "activationEvents": ["onStartupFinished", "onView:workspacejsonCodexChangeset"],
+  "activationEvents": ["onStartupFinished"],
   "contributes": {
     "configuration": {
       "title": "workspace.json Codex Decorations",
@@ -26,14 +26,7 @@
           "contextualTitle": "Current Change"
         }
       ]
-    },
-    "commands": [
-      {
-        "command": "workspacejsonCodex.runVerification",
-        "title": "Run workspace.json verification",
-        "icon": "$(play)"
-      }
-    ]
+    }
   },
   "scripts": { "build": "tsc -p tsconfig.json", "test": "npm run build && node --test out/test/*.check.js", "package": "npm run build && vsce package --allow-missing-repository --out workspacejson-codex-decorations-0.0.1.vsix" },
   "devDependencies": { "@types/node": "^22.0.0", "@types/vscode": "^1.85.0", "@vscode/vsce": "^3.6.0", "typescript": "^5.9.0" }

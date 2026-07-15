@@ -75,13 +75,8 @@ export class ChangesetTreeProvider implements vscode.TreeDataProvider<ChangesetT
         id: "covered",
         kind: "covered",
         label: "Partner set covered",
-        description: "Run verification",
-        iconPath: new vscode.ThemeIcon("play"),
-        command: {
-          command: "workspacejsonCodex.runVerification",
-          title: "Run verification",
-          arguments: [folder.uri],
-        },
+        description: "No missing partners",
+        iconPath: new vscode.ThemeIcon("check"),
         contextValue: "covered",
       }];
     }
