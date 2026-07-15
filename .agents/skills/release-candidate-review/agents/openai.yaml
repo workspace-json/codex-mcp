@@ -1,4 +1,0 @@
-interface:
-  display_name: "Release Candidate Review"
-  short_description: "Audit a frozen release candidate for judges"
-  default_prompt: "Use $release-candidate-review to audit this frozen release candidate before judge review."

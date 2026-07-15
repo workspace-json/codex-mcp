@@ -1,4 +1,0 @@
-interface:
-  display_name: "Docs Claim Sync"
-  short_description: "Find evidence drift across public claims"
-  default_prompt: "Use $docs-claim-sync to report claim drift before editing public documentation."

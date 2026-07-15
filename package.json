@@ -37,7 +37,7 @@
   "files": ["dist", "hooks", "scripts/install.mjs", ".codex-plugin", ".mcp.json", "vsix", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
-    "build:extension": "npm --prefix extension ci && npm --prefix extension run package && mkdir -p vsix && cp extension/workspacejson-codex-decorations-*.vsix vsix/",
+    "build:extension": "rm -rf extension/node_modules extension/*.vsix vsix/*.vsix && npm --prefix extension ci && npm --prefix extension run package && mkdir -p vsix && cp extension/workspacejson-codex-decorations-*.vsix vsix/",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",

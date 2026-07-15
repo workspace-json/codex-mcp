@@ -1,35 +1,37 @@
-# workspace.json — Codex change intelligence
+<p align="center">
+  <img src="https://raw.githubusercontent.com/workspace-json/codex-mcp/main/assets/workspace-json-codex-lockup-dark.png" alt="workspace.json / Codex" width="700">
+</p>
 
-Surfaces the repository evidence recorded in your local `.agents/workspace.json` at the moment you are changing code:
+<p align="center"><strong>Repository evidence, at the moment you change code — in native VS Code surfaces, with no webview and no telemetry.</strong></p>
 
-- **Explorer decorations** on files with recorded fragility, with the evidence claim on hover.
-- A **current-change** view that names the evidenced co-change partners a change is leaving out.
-- A synchronized **status item** reflecting the same assessment when the view is collapsed.
-- **Receipt-backed advisory review** — reviewer output is shown only from a persisted receipt, with its model, scope, and freshness. A review is advisory and never a safety certification.
+---
 
-Everything is read from your local `.agents/workspace.json`. The extension makes **no network calls and sends no telemetry**.
+**workspace.json — Codex change intelligence** reads the evidence recorded in your local `.agents/workspace.json` and makes it actionable while you edit:
+
+- **Explorer decorations** mark files by their role in the current change — the denied file, its omitted co-change partners, the ones you've already included — with the evidence claim on hover.
+- A branded **workspace.json** view in the Activity Bar shows the **current change**: the deterministic decision, why it's denied, and exactly which evidenced partners are omitted.
+- A synchronized **status-bar** heartbeat mirrors the same decision when the view is collapsed.
+- **Receipt-backed advisory review** renders a GPT-5.6 verdict *only* from a persisted receipt — model, scope, freshness, and gaps — one click from the receipt itself.
+
+## Two planes, kept separate
+
+The whole point of the surface is a distinction you can see in one hover:
+
+> **Deterministic decision: DENY** — 2 evidenced partners omitted
+> **Advisory result: PASS within reviewed scope**
+
+The rules said no. An independent model looked and found no additional blocker. **The block holds anyway.** Judgment and enforcement are separate planes: an advisory review can add signal, but it never lifts a deterministic decision, and `PASS` is scope-bounded — never a safety certification.
+
+Everything is read from your local `.agents/workspace.json`. **No network calls. No telemetry.**
 
 ## Install
 
-The recommended path is the package installer, which handles the `code` CLI, idempotency, and the reload prompt for you:
+Recommended — the package installer handles the `code` CLI, idempotency, and the reload prompt:
 
 ```bash
 npx -y @workspacejson/codex-mcp install --with-extension
 ```
 
-To install a pinned VSIX by hand (offline, or a release artifact):
-
-```bash
-code --install-extension workspacejson-codex-decorations-<version>.vsix
-```
-
-VS Code Stable is the supported target. See the [main README](https://github.com/workspace-json/codex-mcp#installation) for the full MCP + hook + extension install journey.
-
-## Build from source
-
-```bash
-npm ci
-npm run package   # produces workspacejson-codex-decorations-<version>.vsix
-```
+Only VS Code Stable is targeted; it never silently installs into another editor. For the full MCP + deterministic hook + extension journey, see the [main repository](https://github.com/workspace-json/codex-mcp#installation).
 
 Apache-2.0.

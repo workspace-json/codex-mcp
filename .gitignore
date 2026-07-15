@@ -20,3 +20,7 @@ hac120-desktop.png
 
 # Local Codex transcript-processing scratchwork may contain prompts and tool traces.
 /scripts/extract-session*.mjs
+
+# Private Codex workflow guidance stays available in this checkout, not the OSS repo.
+/AGENTS.local.md
+/.agents/skills/

@@ -1,45 +1,23 @@
 # Agent guidance
 
-Before editing or creating a file, call `workspace_get_file_context` on the target
-path to check fragility and co-change partners. Treat a fragile result as a reason
-to make minimal, well-tested changes; treat co-change partners as candidates for
-related edits. If the tool is unavailable, record that limitation before making a
-minimal change and do not represent the missing result as a safety signal.
+This repository ships `workspace.json` intelligence to coding agents. When you work
+in a project that has it installed, follow the same discipline the tooling enforces.
 
-## Issue and worktree contract
+- **Check before you edit.** Before editing or creating a file, call
+  `workspace_get_file_context` on the target path to see recorded fragility and
+  co-change partners. Treat a fragile result as a reason to make minimal,
+  well-tested changes; treat co-change partners as candidates for related edits.
+- **Absence is not approval.** If the tool is unavailable, or `workspace.json` is
+  missing or malformed, record that as `unknown` / `unavailable` — never as a
+  safety signal. Never claim a change is "safe".
+- **Trust evidence, not labels.** `ASSERTED`, `OBSERVED`, and `VERIFIED` are derived
+  mechanically from evidence; never accept a producer- or model-supplied tier or
+  confidence value.
+- **The reviewer is advisory.** The optional GPT-5.6 review is read-only and
+  advisory. Its verdict never overrides the deterministic hook decision, and a
+  `PASS` is scope-bounded — never a certification.
 
-- Read the assigned Linear issue, its blockers, and the Build Week Execution Graph
-  before implementation.
-- Use one Linear issue per worktree. Record the starting commit and allowed files
-  before writing.
-- Serialize edits to shared files: `package.json`, lockfiles, `README.md`, root
-  configuration, plugin manifests, and hook adapters.
-- Stop when a newly discovered requirement changes evidence semantics, public
-  claims, the proof fixture, credentials, or the submission scope. Those decisions
-  require human approval.
+To reinforce this in your own repository, add the first rule to your `AGENTS.md`:
 
-## Evidence and review contract
-
-- Use `$implementation-strategy` before changing runtime behavior, hooks, MCP
-  outputs, installer behavior, package exports, or public contracts.
-- Use `$code-change-verification` after code, test, package, install, hook, or
-  build changes.
-- Use `$docs-claim-sync` before changing public documentation or claims.
-- Use `$release-candidate-review` after release-candidate freeze and before the
-  HAC-124 judge-journey review.
-- Never claim a change is safe. Missing or malformed workspace intelligence is
-  `unknown` or `unavailable`, not approval.
-- `ASSERTED`, `OBSERVED`, and `VERIFIED` are derived from evidence; never accept a
-  producer- or model-supplied tier or confidence value.
-- The GPT-5.6 adversarial reviewer is advisory and read-only. Its verdict never
-  changes the deterministic hook decision.
-- Run issue-specific checks and `npm run prepublishOnly` before handoff. For a bug
-  regression, watch the guard fail without the fix before trusting the green.
-- Run the adversarial reviewer after each logical implementation chunk and before
-  the final implementation commit.
-
-## Handoff
-
-Update the assigned Linear issue with the starting and ending commits, exact
-files, commands and observed results, unresolved risks, and the next issue
-unblocked. Keep temporary coordination notes local and untracked.
+> Before editing or creating a file, call `workspace_get_file_context` on the target
+> path to check fragility and co-change partners.
