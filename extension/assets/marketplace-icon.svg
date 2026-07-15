@@ -1,11 +1,13 @@
 <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-  <!-- Marketplace/Open VSX listing icon: the {•} product glyph on a solid
-       background. Distinct from assets/icon.svg (the currentColor Activity Bar
-       mask) because the marketplace icon must be a fixed-color raster (PNG). -->
-  <rect width="256" height="256" rx="52" fill="#1b1b1d"/>
-  <g transform="translate(58,58) scale(5.83)" fill="none" stroke="#e8e8ea" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Marketplace/Open VSX listing icon: the {•} glyph on the brand canvas.
+       On-brand per assets/branding.md — canvas #07100e, near-white braces, the
+       emerald .json accent (#00c896) as the dot. A compressed workspace.json
+       lockup. (The Activity Bar icon, assets/icon.svg, stays a currentColor
+       mask; only this raster carries brand color.) -->
+  <rect width="256" height="256" rx="52" fill="#07100e"/>
+  <g transform="translate(58,58) scale(5.83)" fill="none" stroke="#edf7f3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M9.7 3.5c-2.5 0-3.4 1.3-3.4 3.8v2.1c0 1.1-.5 1.7-1.8 2.4 1.3.7 1.8 1.3 1.8 2.4v2.1c0 2.5.9 3.8 3.4 3.8"/>
     <path d="M14.3 3.5c2.5 0 3.4 1.3 3.4 3.8v2.1c0 1.1.5 1.7 1.8 2.4-1.3.7-1.8 1.3-1.8 2.4v2.1c0 2.5-.9 3.8-3.4 3.8"/>
-    <circle cx="12" cy="12.4" r="1.3" fill="#e8e8ea" stroke="none"/>
+    <circle cx="12" cy="12.4" r="1.45" fill="#00c896" stroke="none"/>
   </g>
 </svg>
