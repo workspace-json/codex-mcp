@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { relativeWorkspacePath } from "./pathMatch.js";
+import { pathsFromFsPaths } from "./changesetLogic.js";
 
 /**
  * Minimal typings for the built-in VS Code Git extension API.
@@ -40,16 +40,8 @@ async function getGitExtension(): Promise<GitExtension | undefined> {
 }
 
 function repoChangesToPaths(rootPath: string, repo: Repository): Set<string> {
-  const paths = new Set<string>();
-  for (const change of repo.state.indexChanges) {
-    const rel = relativeWorkspacePath(rootPath, change.uri.fsPath);
-    if (rel) paths.add(rel);
-  }
-  for (const change of repo.state.workingTreeChanges) {
-    const rel = relativeWorkspacePath(rootPath, change.uri.fsPath);
-    if (rel) paths.add(rel);
-  }
-  return paths;
+  const fsPaths = [...repo.state.indexChanges, ...repo.state.workingTreeChanges].map((change) => change.uri.fsPath);
+  return pathsFromFsPaths(rootPath, fsPaths);
 }
 
 /**

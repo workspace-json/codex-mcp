@@ -5,10 +5,13 @@ import { relativeWorkspacePath } from "./pathMatch.js";
 import { subscribeChangeset, type Changeset } from "./gitChangeset.js";
 import { findLatestVerdict, type ReviewerVerdict } from "./reviewerVerdict.js";
 import { refreshVerdict } from "./verdictRefresh.js";
+import { computeChangesetFiles, type ChangesetFile } from "./changesetLogic.js";
 
 export type { FragileFileIntelligence } from "./parseSnapshot.js";
+export type { ChangesetFile } from "./changesetLogic.js";
 
 const ARTIFACT_PATH = ".agents/workspace.json";
+const VERDICT_GLOB = ".local/workspacejson/reviewer/**/verdict.json";
 const DEBOUNCE_MS = 200;
 
 export type FileStatus =
@@ -17,13 +20,6 @@ export type FileStatus =
   | { kind: "indexed" }
   /** Not present in generated.fileIndex at all: workspace.json has no opinion on this file. */
   | { kind: "unknown" };
-
-export interface ChangesetFile {
-  path: string;
-  file: FragileFileIntelligence;
-  /** Co-change partners that are NOT currently in the changeset. */
-  missingPartners: string[];
-}
 
 export interface CurrentChange {
   /** All repo-relative paths in the current changeset (staged + working tree). */
@@ -46,15 +42,20 @@ export interface CurrentChange {
  *
  * This spine also owns the current proposed changeset (staged + working tree
  * via the built-in vscode.git API) and the latest GPT-5.6 reviewer verdict
- * discovered under `.local/workspacejson/reviewer/** /verdict.json`.
- * Both are folded into the same onDidChangeIntelligence event so the A3
- * live-changeset tree renderer transitions live as the diff changes.
+ * discovered under `.local/workspacejson/reviewer/** /verdict.json`. Both
+ * are independent artifacts from workspace.json — the verdict is watched
+ * on its own glob (VERDICT_GLOB) rather than piggybacking on the
+ * workspace.json watcher, so a fresh verdict updates surfaces on its own,
+ * not only as a side effect of an unrelated workspace.json edit. All three
+ * sources funnel into the same onDidChangeIntelligence event so the A3
+ * live-changeset tree renderer transitions live as any of them changes.
  */
 export class WorkspaceIntelligenceModel implements vscode.Disposable {
   private readonly snapshots = new Map<string, IntelligenceSnapshot | undefined>();
   private readonly changesets = new Map<string, Changeset>();
   private readonly verdicts = new Map<string, ReviewerVerdict | undefined>();
-  private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly artifactTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly verdictTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private readonly watchers = new Map<string, vscode.FileSystemWatcher>();
   private readonly gitSubscriptions = new Map<string, vscode.Disposable>();
   private readonly emitter = new vscode.EventEmitter<void>();
@@ -74,14 +75,24 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
   private attach(folder: vscode.WorkspaceFolder): void {
     const key = folder.uri.toString();
     if (this.watchers.has(key)) return;
+
     void this.reload(folder);
-    const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, ARTIFACT_PATH));
-    const schedule = () => this.schedule(folder);
-    watcher.onDidCreate(schedule);
-    watcher.onDidChange(schedule);
-    watcher.onDidDelete(schedule);
-    this.watchers.set(key, watcher);
-    this.disposables.push(watcher);
+    void this.loadVerdict(folder);
+
+    const artifactWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, ARTIFACT_PATH));
+    const scheduleArtifact = () => this.scheduleArtifact(folder);
+    artifactWatcher.onDidCreate(scheduleArtifact);
+    artifactWatcher.onDidChange(scheduleArtifact);
+    artifactWatcher.onDidDelete(scheduleArtifact);
+    this.watchers.set(key, artifactWatcher);
+    this.disposables.push(artifactWatcher);
+
+    const verdictWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(folder, VERDICT_GLOB));
+    const scheduleVerdict = () => this.scheduleVerdict(folder);
+    verdictWatcher.onDidCreate(scheduleVerdict);
+    verdictWatcher.onDidChange(scheduleVerdict);
+    verdictWatcher.onDidDelete(scheduleVerdict);
+    this.disposables.push(verdictWatcher);
 
     void (async () => {
       const subscription = await subscribeChangeset(
@@ -94,15 +105,28 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     })();
   }
 
-  private schedule(folder: vscode.WorkspaceFolder): void {
+  private scheduleArtifact(folder: vscode.WorkspaceFolder): void {
     const key = folder.uri.toString();
-    const active = this.timers.get(key);
+    const active = this.artifactTimers.get(key);
     if (active) clearTimeout(active);
-    this.timers.set(
+    this.artifactTimers.set(
       key,
       setTimeout(() => {
-        this.timers.delete(key);
+        this.artifactTimers.delete(key);
         void this.reload(folder);
+      }, DEBOUNCE_MS),
+    );
+  }
+
+  private scheduleVerdict(folder: vscode.WorkspaceFolder): void {
+    const key = folder.uri.toString();
+    const active = this.verdictTimers.get(key);
+    if (active) clearTimeout(active);
+    this.verdictTimers.set(
+      key,
+      setTimeout(() => {
+        this.verdictTimers.delete(key);
+        void this.loadVerdict(folder);
       }, DEBOUNCE_MS),
     );
   }
@@ -127,7 +151,7 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     }
     if (!snapshot) console.debug(`[workspace.json intelligence] present but malformed, treating as unavailable: ${artifact.fsPath}`);
     this.snapshots.set(key, snapshot);
-    await this.loadVerdict(folder);
+    this.emitter.fire();
   }
 
   private onChangeset(folder: vscode.WorkspaceFolder, paths: Changeset): void {
@@ -161,23 +185,7 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     const changeset = this.changesets.get(folder.uri.toString()) ?? new Set<string>();
     const verdict = this.verdicts.get(folder.uri.toString());
     const evidenceUnavailable = new Set<string>(verdict?.gaps ?? []);
-    const files: ChangesetFile[] = [];
-    let totalMissing = 0;
-
-    if (snapshot) {
-      for (const path of changeset) {
-        const fragile = snapshot.fragileFiles.get(path);
-        if (!fragile) continue;
-        const missingPartners = fragile.coChangePartners.filter((p) => !changeset.has(p));
-        if (missingPartners.length > 0) {
-          files.push({ path, file: fragile, missingPartners });
-          totalMissing += missingPartners.length;
-        }
-      }
-      // Deterministic order: by path.
-      files.sort((a, b) => a.path.localeCompare(b.path));
-    }
-
+    const { files, totalMissing } = computeChangesetFiles(snapshot, changeset);
     return { changeset, files, totalMissing, evidenceUnavailable, verdict };
   }
 
@@ -195,7 +203,8 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
   }
 
   dispose(): void {
-    for (const timer of this.timers.values()) clearTimeout(timer);
+    for (const timer of this.artifactTimers.values()) clearTimeout(timer);
+    for (const timer of this.verdictTimers.values()) clearTimeout(timer);
     for (const disposable of this.disposables) disposable.dispose();
   }
 }

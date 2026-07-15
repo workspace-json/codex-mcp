@@ -21,6 +21,6 @@
   },
   "files": {
     "include": ["src", "tests", "scripts", "hooks", "*.json", "*.mjs", "*.ts"],
-    "ignore": [".claude", ".local", "dist", "node_modules", "fixture", "assets"]
+    "ignore": [".claude", ".local", "dist", "node_modules", "fixture", "assets", "extension"]
   }
 }

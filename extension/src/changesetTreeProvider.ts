@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { WorkspaceIntelligenceModel } from "./workspaceIntelligence.js";
+import { deriveFileLabel } from "./changesetLogic.js";
 
 export const CHANGESET_TREE_VIEW_ID = "workspacejsonCodexChangeset";
 
@@ -21,14 +22,6 @@ function openFileCommand(uri: vscode.Uri): vscode.Command {
     command: "vscode.open",
     title: "Open file",
     arguments: [uri],
-  };
-}
-
-function openWorkspaceJsonCommand(folder: vscode.WorkspaceFolder): vscode.Command {
-  return {
-    command: "vscode.open",
-    title: "Open workspace.json",
-    arguments: [vscode.Uri.joinPath(folder.uri, ".agents/workspace.json")],
   };
 }
 
@@ -84,16 +77,7 @@ export class ChangesetTreeProvider implements vscode.TreeDataProvider<ChangesetT
     const nodes: ChangesetTreeNode[] = [];
     for (const file of current.files) {
       const fileUri = vscode.Uri.joinPath(folder.uri, file.path);
-      const missingCount = file.missingPartners.length;
-      const verdict = current.verdict;
-      const label =
-        missingCount === 0
-          ? "Partner set covered"
-          : missingCount === 1
-            ? "1 missing partner"
-            : verdict?.verdict === "BLOCK" && verdict.checked.includes(file.path)
-              ? "DENY"
-              : `${missingCount} missing partners`;
+      const label = deriveFileLabel(file.missingPartners.length);
       const fileNode: ChangesetTreeNode = {
         id: `file:${file.path}`,
         kind: "file",
