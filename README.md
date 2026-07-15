@@ -63,7 +63,7 @@ Without the hook you still get the read tools, but not deterministic enforcement
 ### CI / repo-native check — no editor required
 
 ```bash
-git diff --name-only | npx @workspacejson/codex-mcp check --paths-stdin
+git diff --name-only | node hooks/pre-edit-check.mjs --paths-stdin
 ```
 
 Exit code 2 means a fragile change is missing a co-change partner; the reason prints with its evidence. Drop it into a GitHub Action to gate pull requests the same way the hook gates edits.
