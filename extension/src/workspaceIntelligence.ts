@@ -1,6 +1,7 @@
 import { promises as fs } from "node:fs";
 import * as vscode from "vscode";
 import { type IntelligenceSnapshot, type FragileFileIntelligence, parseSnapshot } from "./parseSnapshot.js";
+import { type ChangeRole, changeRoleFor } from "./changesetLogic.js";
 import { relativeWorkspacePath } from "./pathMatch.js";
 import { subscribeChangeset, type Changeset } from "./gitChangeset.js";
 import { loadLatestReceipt, summarizeReview, type ReceiptLoad } from "./reviewerVerdict.js";
@@ -209,6 +210,21 @@ export class WorkspaceIntelligenceModel implements vscode.Disposable {
     const fragile = entry.snapshot.fragileFiles.get(path);
     if (fragile) return { kind: "fragile", file: fragile };
     return entry.snapshot.fileIndex.has(path) ? { kind: "indexed" } : { kind: "unknown" };
+  }
+
+  /** The file's role in the current change, driving the decision-oriented Explorer decoration. */
+  getChangeRole(uri: vscode.Uri): ChangeRole | undefined {
+    if (uri.scheme !== "file") return undefined;
+    const folder = vscode.workspace.getWorkspaceFolder(uri);
+    if (!folder) return undefined;
+    const key = folder.uri.toString();
+    const entry = this.sources.get(key);
+    if (!entry?.snapshot) return undefined;
+    const path = relativeWorkspacePath(folder.uri.fsPath, uri.fsPath);
+    if (!path) return undefined;
+    // No git changeset yet → no decision role, but recorded fragility still shows
+    // as the subordinate evidence marker (empty change → "fragile" role).
+    return changeRoleFor(entry.snapshot, this.changesets.get(key) ?? new Set(), path);
   }
 
   dispose(): void {

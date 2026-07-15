@@ -2,7 +2,7 @@
   "name": "workspacejson-codex-decorations",
   "displayName": "workspace.json — Codex change intelligence",
   "description": "Surfaces recorded fragility, co-change partners, and receipt-backed advisory review for the file you are changing — Explorer decorations, a current-change view, and a status item, all read from your local .agents/workspace.json. No telemetry, no network.",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "publisher": "workspacejson",
   "license": "Apache-2.0",
@@ -12,16 +12,25 @@
   "activationEvents": ["onStartupFinished"],
   "contributes": {
     "configuration": {
-      "title": "workspace.json Codex Decorations",
+      "title": "workspace.json",
       "properties": {
-        "workspacejsonCodex.decorations.enabled": { "type": "boolean", "default": true, "description": "Show Explorer badges for files marked fragile in .agents/workspace.json." }
+        "workspacejsonCodex.decorations.enabled": { "type": "boolean", "default": true, "description": "Show Explorer decorations for the current-change decision recorded in .agents/workspace.json." }
       }
     },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "workspacejson",
+          "title": "workspace.json",
+          "icon": "media/workspacejson-view.svg"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "workspacejson": [
         {
           "id": "workspacejsonCodexChangeset",
-          "name": "workspace.json",
+          "name": "current change",
           "when": "workspaceFolderCount > 0 && workspacejsonCodex.changesetView.enabled",
           "contextualTitle": "workspace.json"
         }

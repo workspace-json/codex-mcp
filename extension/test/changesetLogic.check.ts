@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { FragileFileIntelligence, IntelligenceSnapshot } from "../src/parseSnapshot.js";
-import { computeChangesetFiles, pathsFromFsPaths } from "../src/changesetLogic.js";
+import { changeRoleFor, computeChangesetFiles, pathsFromFsPaths } from "../src/changesetLogic.js";
 
 // -- computeChangesetFiles ----------------------------------------------------
 
@@ -54,6 +54,31 @@ test("computeChangesetFiles: results are sorted deterministically by path", () =
   const snapshot = snapshotWith([fragile("z.ts", ["p.ts"]), fragile("a.ts", ["q.ts"])]);
   const result = computeChangesetFiles(snapshot, new Set(["z.ts", "a.ts"]));
   assert.deepEqual(result.files.map((f) => f.path), ["a.ts", "z.ts"]);
+});
+
+// -- changeRoleFor: the decision-oriented Explorer role --------------------------
+
+test("changeRoleFor: the denied file, an omitted partner, and an unrelated file get distinct roles", () => {
+  const snapshot = snapshotWith([fragile("src/routes/checkout.ts", ["src/auth/session.ts", "src/lib/format.ts"])]);
+  const change = new Set(["src/routes/checkout.ts"]);
+  assert.deepEqual(changeRoleFor(snapshot, change, "src/routes/checkout.ts"), { role: "denied", missingCount: 2, tier: "ASSERTED" });
+  assert.deepEqual(changeRoleFor(snapshot, change, "src/auth/session.ts"), { role: "omitted", parent: "src/routes/checkout.ts", tier: "ASSERTED" });
+  assert.equal(changeRoleFor(snapshot, change, "README.md"), undefined);
+});
+
+test("changeRoleFor: including a partner flips it omitted → included and lowers the denied count (2 → 1)", () => {
+  const snapshot = snapshotWith([fragile("src/routes/checkout.ts", ["src/auth/session.ts", "src/lib/format.ts"])]);
+  const change = new Set(["src/routes/checkout.ts", "src/auth/session.ts"]);
+  assert.deepEqual(changeRoleFor(snapshot, change, "src/auth/session.ts"), { role: "included", parent: "src/routes/checkout.ts" });
+  assert.deepEqual(changeRoleFor(snapshot, change, "src/routes/checkout.ts"), { role: "denied", missingCount: 1, tier: "ASSERTED" });
+  assert.deepEqual(changeRoleFor(snapshot, change, "src/lib/format.ts"), { role: "omitted", parent: "src/routes/checkout.ts", tier: "ASSERTED" });
+});
+
+test("changeRoleFor: once all partners are included the change is no longer denied (1 → covered)", () => {
+  const snapshot = snapshotWith([fragile("src/routes/checkout.ts", ["src/auth/session.ts", "src/lib/format.ts"])]);
+  const change = new Set(["src/routes/checkout.ts", "src/auth/session.ts", "src/lib/format.ts"]);
+  assert.notEqual(changeRoleFor(snapshot, change, "src/routes/checkout.ts")?.role, "denied");
+  assert.deepEqual(changeRoleFor(snapshot, change, "src/auth/session.ts"), { role: "included", parent: "src/routes/checkout.ts" });
 });
 
 // -- pathsFromFsPaths ----------------------------------------------------------

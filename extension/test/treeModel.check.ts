@@ -29,18 +29,24 @@ function assertClean(nodes: PlainNode[]): void {
   }
 }
 
-test("DENY change renders a decision row per file with a hollow-circle partner child per absent partner", () => {
+test("DENY change renders a decision row → a causal omission line → an omitted-partner child per partner", () => {
   const v = viewFor(AVAILABLE, snapshotWith([fragile("src/routes/checkout.ts", ["src/auth/session.ts", "src/lib/format.ts"])]), new Set(["src/routes/checkout.ts"]));
   const nodes = buildChangeNodes(v);
   assert.equal(nodes.length, 1);
   assert.equal(nodes[0].kind, "decisionFile");
   assert.equal(nodes[0].label, "DENY · checkout.ts");
   assert.equal(nodes[0].description, "src/routes");
-  assert.equal(nodes[0].children?.length, 2);
-  const partner = nodes[0].children?.[0];
+  // One causal line gives the nested partners their meaning.
+  const omission = nodes[0].children?.[0];
+  assert.equal(omission?.kind, "omissionCount");
+  assert.equal(omission?.label, "2 evidenced partners omitted");
+  assert.equal(omission?.children?.length, 2);
+  const partner = omission?.children?.[0];
   assert.equal(partner?.kind, "partner");
   assert.equal(partner?.label, "session.ts");
-  assert.match(partner?.description ?? "", /absent$/);
+  // "omitted", never "absent": the file exists, it is just not in the change.
+  assert.match(partner?.description ?? "", /omitted$/);
+  assert.doesNotMatch(partner?.description ?? "", /absent/);
 });
 
 test("covered state always carries the verification requirement (§4.2, §9)", () => {

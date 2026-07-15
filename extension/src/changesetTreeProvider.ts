@@ -8,21 +8,27 @@ import type { WorkspaceIntelligenceModel } from "./workspaceIntelligence.js";
 
 export const CHANGESET_TREE_VIEW_ID = "workspacejsonCodexChangeset";
 
-// Decision severity is the dominant, action-oriented axis and carries a theme
-// color (§3.1 "DENY: error/red icon"). Evidence strength and availability stay
-// subordinate — absence is a neutral hollow circle, never a danger color (§3.1,
-// §4.2). Color is one signal among glyph + label, never the only distinction.
-const SEVERITY_ERROR = new vscode.ThemeColor("problemsErrorIcon.foreground");
-const SEVERITY_INFO = new vscode.ThemeColor("problemsInfoIcon.foreground");
+// Color carries state, and only state. Each color means exactly one thing, and
+// the deterministic decision stays the strongest signal: DENY red dominates,
+// omission is amber, an included/covered partner is green, the review plane is
+// gold, evidence and availability stay quiet. Structure, counts, and navigation
+// get no color at all — otherwise the important states stop standing out.
+const SEVERITY_ERROR = new vscode.ThemeColor("problemsErrorIcon.foreground"); // deterministic DENY / BLOCK / FAILED
+const SEVERITY_WARN = new vscode.ThemeColor("problemsWarningIcon.foreground"); // omitted partner
+const SEVERITY_INFO = new vscode.ThemeColor("problemsInfoIcon.foreground"); // ANNOTATE
+const OK = new vscode.ThemeColor("charts.green"); // included / covered / advisory PASS
+const REVIEW_GOLD = new vscode.ThemeColor("charts.yellow"); // the advisory-review plane marker
 
 function iconFor(node: PlainNode): vscode.ThemeIcon | undefined {
   switch (node.kind) {
     case "decisionFile":
       return new vscode.ThemeIcon("error", SEVERITY_ERROR);
+    case "omissionCount":
+      return undefined; // structural causal line — no icon, no color
     case "partner":
-      return new vscode.ThemeIcon("circle-outline");
+      return new vscode.ThemeIcon("circle-outline", SEVERITY_WARN);
     case "covered":
-      return new vscode.ThemeIcon("check");
+      return new vscode.ThemeIcon("check", OK);
     case "annotate":
       return new vscode.ThemeIcon("info", SEVERITY_INFO);
     case "idle":
@@ -41,10 +47,10 @@ function iconFor(node: PlainNode): vscode.ThemeIcon | undefined {
 }
 
 function reviewIcon(node: PlainNode): vscode.ThemeIcon {
-  if (node.id === "review") return new vscode.ThemeIcon("law"); // the REVIEW group header
+  if (node.id === "review") return new vscode.ThemeIcon("law", REVIEW_GOLD); // the REVIEW group header
   switch (node.reviewState) {
     case "PASS":
-      return new vscode.ThemeIcon("pass");
+      return new vscode.ThemeIcon("pass", OK); // green check; the PASS text stays neutral
     case "BLOCK":
     case "FAILED":
       return new vscode.ThemeIcon("error", SEVERITY_ERROR);
@@ -109,7 +115,10 @@ export class ChangesetTreeProvider implements vscode.TreeDataProvider<PlainNode>
       const folder = vscode.workspace.workspaceFolders?.[0];
       if (folder) {
         const uri = vscode.Uri.joinPath(folder.uri, node.path);
-        item.resourceUri = uri;
+        // Deliberately NOT setting item.resourceUri: it made the file-decoration
+        // badge/color leak onto the row, tinting the deterministic DENY label
+        // beige so it read as a warning. The semantic icon owns the row's color;
+        // the open command still targets the file.
         item.command = { command: COMMAND_IDS.openFile, title: "Open file", arguments: [uri] };
       }
     }
@@ -119,7 +128,6 @@ export class ChangesetTreeProvider implements vscode.TreeDataProvider<PlainNode>
   }
 
   private tooltipFor(node: PlainNode): vscode.MarkdownString | undefined {
-    const deterministic = this.view?.currentChange.decision ?? "IDLE";
     switch (node.kind) {
       case "decisionFile": {
         const file = node.path ? this.filesByPath.get(node.path) : undefined;
@@ -134,7 +142,7 @@ export class ChangesetTreeProvider implements vscode.TreeDataProvider<PlainNode>
         return trustedTooltip(coveredTooltip());
       case "review":
         if (node.id === "review") return undefined; // the group header carries no tooltip
-        return this.view ? trustedTooltip(reviewTooltip(this.view.review, deterministic)) : undefined;
+        return this.view ? trustedTooltip(reviewTooltip(this.view)) : undefined;
       default:
         return undefined;
     }
@@ -150,9 +158,12 @@ export class ChangesetTreeProvider implements vscode.TreeDataProvider<PlainNode>
 }
 
 /**
- * Register the branded `workspace.json` Tree View (§4.2). Uses createTreeView
- * (not registerTreeDataProvider) so title, description, and the omission-count
- * badge are set, and updated from the single intelligence event.
+ * Register the `workspace.json` Tree View (§4.2). Uses createTreeView (not
+ * registerTreeDataProvider) so the omission-count badge is set and updated from
+ * the single intelligence event. Product identity ("workspace.json") is owned
+ * by the Activity Bar view container and the view name ("current change"), so
+ * no title/description is set here — that would double the "workspace.json"
+ * label against the container header.
  */
 export function registerChangesetTreeProvider(
   model: WorkspaceIntelligenceModel,
@@ -163,8 +174,6 @@ export function registerChangesetTreeProvider(
     treeDataProvider: provider,
     showCollapseAll: false,
   });
-  treeView.title = "workspace.json";
-  treeView.description = "current change";
 
   const syncBadge = () => {
     const folder = vscode.workspace.workspaceFolders?.[0];

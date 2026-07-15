@@ -49,10 +49,12 @@ test("decisionTooltip: names the file, lists absent partners, keeps the advisory
   assertOnlyAllowlistedCommands(md);
 });
 
-test("partnerTooltip: describes a recorded absent partner without fabricating precision", () => {
+test("partnerTooltip: describes a partner omitted from the current change (the file exists)", () => {
   const md = partnerTooltip("src/auth/session.ts", changesetFile());
-  assert.match(md, /Recorded partner absent/);
-  assert.match(md, /Co-change partner/);
+  assert.match(md, /Evidenced partner omitted/);
+  assert.match(md, /co-change partner/i);
+  assert.match(md, /Not in the current change/);
+  assert.doesNotMatch(md, /\babsent\b/i); // "absent" wrongly implies a missing file
   assertNoProhibited(md);
   assertOnlyAllowlistedCommands(md);
 });
@@ -64,7 +66,7 @@ test("coveredTooltip: ALWAYS states that verification is still required (§4.2, 
   assertOnlyAllowlistedCommands(md);
 });
 
-test("reviewTooltip: shows attribution and keeps deterministic and advisory decisions un-collapsed (§5.4)", () => {
+test("reviewTooltip: leads with the deterministic decision, keeps the advisory result subordinate and scoped (§5.4)", () => {
   const review: ReviewSummary = {
     state: "BLOCK",
     verdict: "BLOCK",
@@ -75,21 +77,33 @@ test("reviewTooltip: shows attribution and keeps deterministic and advisory deci
     findings: ["missing partner"],
     gaps: ["tests not run"],
   };
-  const md = reviewTooltip(review, "WARN");
+  // a.ts is fragile with partner b.ts; a change of a.ts alone is a deterministic DENY.
+  const md = reviewTooltip(view(AVAILABLE, new Set(["a.ts"]), review));
   assert.match(md, /gpt-5\.6/);
-  assert.match(md, /Deterministic decision: \*\*WARN\*\*/);
-  assert.match(md, /Advisory review: \*\*BLOCK\*\*/);
-  assert.match(md, /advisory only/i);
+  assert.match(md, /Deterministic decision: \*\*DENY\*\*/);
+  assert.match(md, /Advisory result: \*\*BLOCK\*\* within reviewed scope/);
+  assert.match(md, /Scope: 3 paths · Fresh/);
   assert.match(md, /tests not run/);
+  assert.doesNotMatch(md, /abcdef0123456789/); // scope-id hash belongs in the receipt, not the hover
   assertNoProhibited(md);
   assertOnlyAllowlistedCommands(md);
 });
 
+test("reviewTooltip: PASS is presented as scope-bounded, never an unqualified pass", () => {
+  const review: ReviewSummary = { state: "PASS", verdict: "PASS", model: "gpt-5.6", reviewedCount: 1, fresh: true, findings: [], gaps: ["no test evidence"] };
+  const md = reviewTooltip(view(AVAILABLE, new Set(["a.ts"]), review));
+  assert.match(md, /Advisory result: \*\*PASS within reviewed scope\*\*/);
+  assert.match(md, /Scope: 1 path · Fresh/);
+  assert.match(md, /Gap: no test evidence/);
+  assertNoProhibited(md);
+});
+
 test("reviewTooltip: a stale receipt never presents as a current PASS", () => {
-  const review: ReviewSummary = { state: "STALE", verdict: "PASS", model: "gpt-5.6", fresh: false, findings: [], gaps: [], detail: "change has moved" };
-  const md = reviewTooltip(review, "DENY");
+  const review: ReviewSummary = { state: "STALE", verdict: "PASS", model: "gpt-5.6", reviewedCount: 1, fresh: false, findings: [], gaps: [], detail: "change has moved" };
+  const md = reviewTooltip(view(AVAILABLE, new Set(["a.ts"]), review));
   assert.match(md, /stale/i);
   assert.match(md, /change has moved/);
+  assert.doesNotMatch(md, /PASS within reviewed scope/);
 });
 
 // -- status bar text ----------------------------------------------------------

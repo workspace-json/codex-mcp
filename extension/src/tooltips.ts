@@ -1,7 +1,6 @@
 import { COMMAND_IDS } from "./commandIds.js";
 import type { ChangesetFile } from "./changesetLogic.js";
 import type { IntelligenceView } from "./semanticModel.js";
-import type { ReviewSummary } from "./reviewerVerdict.js";
 import { baseName } from "./treeModel.js";
 
 /**
@@ -34,7 +33,7 @@ export function decisionTooltip(file: ChangesetFile): string {
     "",
     `\`${file.path}\``,
     "",
-    `${count} recorded co-change ${noun} absent:`,
+    `${count} recorded co-change ${noun} omitted from this change:`,
     "",
     ...file.missingPartners.map((p) => `- \`${p}\` — co-change claim ${tierBadge(file.file.tier)}`),
     "",
@@ -47,16 +46,16 @@ export function decisionTooltip(file: ChangesetFile): string {
   return lines.join("\n");
 }
 
-/** A single absent co-change partner. */
+/** A single co-change partner omitted from the current change (the file itself exists). */
 export function partnerTooltip(partnerPath: string, parent: ChangesetFile): string {
   return [
-    "$(circle-outline) **Recorded partner absent**",
+    "$(circle-outline) **Evidenced partner omitted**",
     "",
     `\`${partnerPath}\``,
     "",
-    `Co-change partner of \`${baseName(parent.path)}\` · ${tierBadge(parent.file.tier)}`,
+    `Recorded co-change partner of \`${baseName(parent.path)}\` · ${tierBadge(parent.file.tier)}`,
     "",
-    "Select this row to open the file.",
+    "Not in the current change. Select this row to open the file.",
     "",
     evidenceLine("Inspect evidence", COMMAND_IDS.inspectEvidence),
   ].join("\n");
@@ -75,47 +74,60 @@ export function coveredTooltip(): string {
   ].join("\n");
 }
 
-/** Reviewer plane tooltip: attributed, advisory, stale-aware (§5.1, §5.2, §5.4). */
-export function reviewTooltip(review: ReviewSummary, deterministic: string): string {
+/**
+ * Reviewer plane tooltip (§5.1, §5.2, §5.4). The governing relationship leads:
+ * the deterministic decision first, the advisory result second and visibly
+ * subordinate, then attribution (model, scope, freshness). The scope-id hash is
+ * implementation metadata and lives in the receipt, not the primary hover.
+ */
+export function reviewTooltip(view: IntelligenceView): string {
+  const { currentChange, review } = view;
   const lines: string[] = ["$(law) **Advisory review**", ""];
 
+  // 1. Deterministic decision governs — always first.
+  lines.push(`Deterministic decision: **${currentChange.decision}**`);
+  if (currentChange.decision === "DENY") {
+    const n = currentChange.missingCount;
+    lines.push(`${n} evidenced ${n === 1 ? "partner remains" : "partners remain"} omitted`);
+  } else if (currentChange.decision === "PARTNER_SET_COVERED") {
+    lines.push("Recorded partner set covered — verification still required");
+  }
+  lines.push("");
+
+  // 2. Advisory result — subordinate; PASS is explicitly scope-bounded, never a certification.
   switch (review.state) {
     case "NOT_RUN":
-      lines.push("No advisory review has run for the current change.");
+      lines.push("Advisory result: not yet run for the current change.");
       break;
     case "RUNNING":
-      lines.push("Advisory review in progress.");
+      lines.push("Advisory result: review in progress.");
       break;
     case "UNAVAILABLE":
-      lines.push("Reviewer unavailable.", "", review.detail ?? "Receipt could not be validated.");
+      lines.push(`Advisory result: unavailable — ${review.detail ?? "receipt could not be validated"}.`);
       break;
     case "FAILED":
-      lines.push("Review failed. Deterministic enforcement is unaffected.");
+      lines.push("Advisory result: review failed. Deterministic enforcement is unaffected.");
       break;
     case "STALE":
-      lines.push(`Review stale · ${review.detail ?? "change has moved"}.`, "", "Re-run to review the current change.");
+      lines.push(`Advisory result: stale — ${review.detail ?? "change has moved"}. Re-run to review the current change.`);
       break;
-    default: {
-      // PASS or BLOCK
-      lines.push(`Advisory verdict: **${review.verdict}** — advisory only; it never overrides deterministic enforcement.`);
+    case "PASS":
+      lines.push("Advisory result: **PASS within reviewed scope**");
       break;
-    }
+    case "BLOCK":
+      lines.push("Advisory result: **BLOCK** within reviewed scope");
+      break;
   }
+  for (const gap of review.gaps) lines.push(`Gap: ${gap}`);
 
+  // 3. Attribution: model, scope, freshness. No scope-id hash here (§ receipt).
   if (review.model) {
-    lines.push("", "---", "");
-    lines.push(`Model: \`${review.model}\``);
-    if (typeof review.reviewedCount === "number") lines.push(`Scope: ${review.reviewedCount} reviewed path(s)`);
-    if (review.scopeHash) lines.push(`Scope id: \`${review.scopeHash.slice(0, 12)}\``);
-    if (review.gaps.length > 0) {
-      lines.push("", "Gaps:");
-      for (const gap of review.gaps) lines.push(`- ${gap}`);
-    }
+    const paths = review.reviewedCount ?? 0;
+    const freshness =
+      review.state === "UNAVAILABLE" || review.state === "FAILED" ? "Unavailable" : review.fresh ? "Fresh" : "Stale";
+    lines.push("", `Model: \`${review.model}\``, `Scope: ${paths} ${paths === 1 ? "path" : "paths"} · ${freshness}`);
   }
 
-  // The advisory verdict never collapses the deterministic decision (§5.4).
-  lines.push("", "---", "", `Deterministic decision: **${deterministic}**`);
-  if (review.verdict) lines.push(`Advisory review: **${review.verdict}**`);
   lines.push("", link("Inspect review receipt", COMMAND_IDS.inspectReceipt));
   return lines.join("\n");
 }

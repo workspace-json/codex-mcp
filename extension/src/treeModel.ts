@@ -12,6 +12,7 @@ import type { ReviewState } from "./reviewerVerdict.js";
 
 export type NodeKind =
   | "decisionFile"
+  | "omissionCount"
   | "partner"
   | "covered"
   | "annotate"
@@ -52,7 +53,7 @@ export function reviewLabel(state: ReviewState): string {
     case "RUNNING":
       return "Reviewing…";
     case "PASS":
-      return "Advisory review · PASS";
+      return "Advisory review · PASS within scope";
     case "BLOCK":
       return "Advisory review · BLOCK";
     case "STALE":
@@ -125,20 +126,32 @@ export function buildChangeNodes(view: IntelligenceView): PlainNode[] {
 
   switch (currentChange.decision) {
     case "DENY":
-      return currentChange.files.map((file) => ({
-        id: `file:${file.path}`,
-        kind: "decisionFile" as const,
-        label: `DENY · ${baseName(file.path)}`,
-        description: dirName(file.path) || undefined,
-        path: file.path,
-        children: file.missingPartners.map((partner) => ({
-          id: `partner:${file.path}:${partner}`,
-          kind: "partner" as const,
-          label: baseName(partner),
-          description: [dirName(partner), "absent"].filter(Boolean).join(" · "),
-          path: partner,
-        })),
-      }));
+      return currentChange.files.map((file) => {
+        const count = file.missingPartners.length;
+        return {
+          id: `file:${file.path}`,
+          kind: "decisionFile" as const,
+          label: `DENY · ${baseName(file.path)}`,
+          description: dirName(file.path) || undefined,
+          path: file.path,
+          // One causal line gives the nested partners meaning: the user should
+          // not have to infer why these files hang under checkout.ts.
+          children: [
+            {
+              id: `omitted:${file.path}`,
+              kind: "omissionCount" as const,
+              label: `${count} evidenced ${count === 1 ? "partner" : "partners"} omitted`,
+              children: file.missingPartners.map((partner) => ({
+                id: `partner:${file.path}:${partner}`,
+                kind: "partner" as const,
+                label: baseName(partner),
+                description: [dirName(partner), "omitted"].filter(Boolean).join(" · "),
+                path: partner,
+              })),
+            },
+          ],
+        };
+      });
     case "PARTNER_SET_COVERED":
       return [
         {
