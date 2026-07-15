@@ -43,12 +43,16 @@ export interface CurrentChange {
  * This spine also owns the current proposed changeset (staged + working tree
  * via the built-in vscode.git API) and the latest GPT-5.6 reviewer verdict
  * discovered under `.local/workspacejson/reviewer/** /verdict.json`. Both
- * are independent artifacts from workspace.json — the verdict is watched
- * on its own glob (VERDICT_GLOB) rather than piggybacking on the
- * workspace.json watcher, so a fresh verdict updates surfaces on its own,
- * not only as a side effect of an unrelated workspace.json edit. All three
- * sources funnel into the same onDidChangeIntelligence event so the A3
- * live-changeset tree renderer transitions live as any of them changes.
+ * are independent artifacts from workspace.json — the verdict is watched on
+ * its own glob (VERDICT_GLOB) rather than piggybacking on the workspace.json
+ * watcher, so a fresh verdict reload happens on its own, not only as a side
+ * effect of an unrelated workspace.json edit. All three sources funnel into
+ * the same onDidChangeIntelligence event, so the A3 tree rebuilds whenever
+ * any of them changes — but the verdict itself is advisory-only and
+ * currently surfaces solely as an informational tooltip annotation
+ * (changesetTreeProvider.ts's verdictAnnotationLines); it deliberately does
+ * NOT drive deriveFileLabel's DENY/missing-partner label (META-117: the
+ * model annotates, it never decides).
  */
 export class WorkspaceIntelligenceModel implements vscode.Disposable {
   private readonly snapshots = new Map<string, IntelligenceSnapshot | undefined>();

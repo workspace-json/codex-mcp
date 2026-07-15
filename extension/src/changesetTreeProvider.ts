@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import type { WorkspaceIntelligenceModel } from "./workspaceIntelligence.js";
-import { deriveFileLabel } from "./changesetLogic.js";
+import { deriveFileLabel, verdictAnnotationLines } from "./changesetLogic.js";
 
 export const CHANGESET_TREE_VIEW_ID = "workspacejsonCodexChangeset";
 
@@ -78,12 +78,15 @@ export class ChangesetTreeProvider implements vscode.TreeDataProvider<ChangesetT
     for (const file of current.files) {
       const fileUri = vscode.Uri.joinPath(folder.uri, file.path);
       const label = deriveFileLabel(file.missingPartners.length);
+      const tooltip = new vscode.MarkdownString(`${file.file.tier} · ${file.file.reason ?? "Recorded as fragile."}`);
+      const annotation = verdictAnnotationLines(current.verdict, current.evidenceUnavailable, file.path);
+      if (annotation.length > 0) tooltip.appendMarkdown(`\n\n---\n\n${annotation.join("\n")}`);
       const fileNode: ChangesetTreeNode = {
         id: `file:${file.path}`,
         kind: "file",
         label,
         description: file.path,
-        tooltip: new vscode.MarkdownString(`${file.file.tier} · ${file.file.reason ?? "Recorded as fragile."}`),
+        tooltip,
         iconPath: new vscode.ThemeIcon("warning"),
         command: openFileCommand(fileUri),
         children: file.missingPartners.map((partner) => {

@@ -40,16 +40,18 @@ test("findLatestVerdict: no reviewer directory at all yields no opinion", async 
   });
 });
 
-test("findLatestVerdict: picks the newest verdict by mtime, not by directory-name sort order", async () => {
+test("findLatestVerdict: picks the newest verdict by mtime, independent of directory-name sort order in either direction", async () => {
   await withTempRoot(async (root) => {
-    // Directory names are deliberately the opposite of mtime order: the
-    // alphabetically-last dir is actually the oldest, and the
-    // alphabetically-first dir is actually the newest. A name-sort-based
-    // "pick the last one" implementation would get this backwards —
-    // artifactDir is caller-overridable to arbitrary labels, so name
-    // sorting is not a safe stand-in for recency.
-    await writeVerdict(root, "z-alphabetically-last", { ...VALID, findings: ["stale"] }, new Date("2020-01-01"));
-    await writeVerdict(root, "a-alphabetically-first", { ...VALID, findings: ["fresh"] }, new Date("2030-01-01"));
+    // The mtime-newest directory is deliberately name-MIDDLE, not
+    // name-first or name-last: an ascending name-sort taking the first
+    // entry would wrongly pick "a-oldest", and a descending sort (or
+    // "pick the last one") would wrongly pick "z-middle-mtime". Only
+    // genuine mtime comparison lands on "m-newest-mtime". artifactDir is
+    // caller-overridable to arbitrary labels, so name sorting in either
+    // direction is not a safe stand-in for recency.
+    await writeVerdict(root, "a-oldest", { ...VALID, findings: ["oldest"] }, new Date("2020-01-01"));
+    await writeVerdict(root, "z-middle-mtime", { ...VALID, findings: ["middle"] }, new Date("2025-01-01"));
+    await writeVerdict(root, "m-newest-mtime", { ...VALID, findings: ["fresh"] }, new Date("2030-01-01"));
 
     const verdict = await findLatestVerdict(root);
     assert.equal(verdict?.findings[0], "fresh");
@@ -58,8 +60,8 @@ test("findLatestVerdict: picks the newest verdict by mtime, not by directory-nam
 
 test("findLatestVerdict: a malformed newest verdict degrades to no opinion (no fallback to an older valid one)", async () => {
   await withTempRoot(async (root) => {
-    await writeVerdict(root, "older-valid", VALID, new Date("2020-01-01"));
-    await writeVerdict(root, "newest-malformed", { status: "COMPLETED" /* missing verdict field */ }, new Date("2030-01-01"));
+    await writeVerdict(root, "b-older-valid", VALID, new Date("2020-01-01"));
+    await writeVerdict(root, "a-newest-malformed", { status: "COMPLETED" /* missing verdict field */ }, new Date("2030-01-01"));
 
     assert.equal(await findLatestVerdict(root), undefined);
   });

@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { FragileFileIntelligence, IntelligenceSnapshot } from "../src/parseSnapshot.js";
-import { computeChangesetFiles, deriveFileLabel, pathsFromFsPaths } from "../src/changesetLogic.js";
+import type { ReviewerVerdict } from "../src/reviewerVerdict.js";
+import { computeChangesetFiles, deriveFileLabel, pathsFromFsPaths, verdictAnnotationLines } from "../src/changesetLogic.js";
 
 // -- deriveFileLabel: the A3 "DENY -> 1 missing partner -> covered" ladder --
 
@@ -70,4 +71,33 @@ test("computeChangesetFiles: results are sorted deterministically by path", () =
 test("pathsFromFsPaths: keeps paths under the root, normalized, and drops paths outside it", () => {
   const result = pathsFromFsPaths("/repo", ["/repo/src/a.ts", "/repo/./src//b.ts", "/other/c.ts"]);
   assert.deepEqual([...result].sort(), ["src/a.ts", "src/b.ts"]);
+});
+
+// -- verdictAnnotationLines: advisory-only, must never appear as a label ------
+
+function verdict(overrides: Partial<ReviewerVerdict>): ReviewerVerdict {
+  return { status: "COMPLETED", verdict: "PASS", artifactDir: "x", findings: [], evidence: [], checked: [], gaps: [], ...overrides };
+}
+
+test("verdictAnnotationLines: no verdict and no evidence gap yields no lines", () => {
+  assert.deepEqual(verdictAnnotationLines(undefined, new Set(), "a.ts"), []);
+});
+
+test("verdictAnnotationLines: a verdict that did not check this file yields no verdict line", () => {
+  const v = verdict({ verdict: "BLOCK", checked: ["other.ts"] });
+  assert.deepEqual(verdictAnnotationLines(v, new Set(), "a.ts"), []);
+});
+
+test("verdictAnnotationLines: a verdict that checked this file surfaces the verdict and its findings", () => {
+  const v = verdict({ verdict: "BLOCK", checked: ["a.ts"], findings: ["missing coverage"] });
+  const lines = verdictAnnotationLines(v, new Set(), "a.ts");
+  assert.equal(lines.length, 2);
+  assert.match(lines[0], /BLOCK/);
+  assert.equal(lines[1], "- missing coverage");
+});
+
+test("verdictAnnotationLines: an evidence-unavailable file gets its own line independent of the verdict's checked set", () => {
+  const lines = verdictAnnotationLines(undefined, new Set(["a.ts"]), "a.ts");
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /Evidence unavailable/);
 });
