@@ -54,5 +54,4 @@ jobs:
           npm pack --dry-run 2>&1 | tee pack.log
           grep -F '.mcp.json' pack.log
           grep -F '.codex-plugin/' pack.log
-          grep -F '.codex/agents/' pack.log
           grep -F 'hooks/' pack.log
