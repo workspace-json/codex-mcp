@@ -104,3 +104,81 @@ export function pathsFromFsPaths(rootPath: string, fsPaths: Iterable<string>): S
   }
   return paths;
 }
+
+export interface RepoRootCandidate<T> {
+  rootPath: string;
+  value: T;
+}
+
+/**
+ * Pick the repository root that most specifically contains `targetPath`. When
+ * multiple candidate roots are prefixes of the target (a repo nested under
+ * another repo's root — submodule, nested checkout, multi-root workspace),
+ * the deepest (longest) root wins, independent of array order. Picking the
+ * first array match instead binds the target to the WRONG repository
+ * whenever the outer repo happens to come first.
+ */
+export function findDeepestRepoRoot<T>(candidates: readonly RepoRootCandidate<T>[], targetPath: string): T | undefined {
+  let best: RepoRootCandidate<T> | undefined;
+  for (const candidate of candidates) {
+    const isMatch = candidate.rootPath === targetPath || targetPath.startsWith(`${candidate.rootPath}/`);
+    if (isMatch && (!best || candidate.rootPath.length > best.rootPath.length)) {
+      best = candidate;
+    }
+  }
+  return best?.value;
+}
+
+export interface Disposable {
+  dispose(): void;
+}
+
+/**
+ * Tracks which repo root is bound to a fixed target path, enforcing that only
+ * the most specific (deepest) matching root is ever bound at a time. Disposes
+ * the previous binding the instant a more specific one takes over, so it is
+ * structurally impossible to end up with two live bindings for the same
+ * target — the earlier bug this replaces left the previous (less specific)
+ * repo's listener live, so it could later fire and silently overwrite state
+ * with the wrong repo's data. Pure and vscode-free: `T` only needs `dispose()`.
+ */
+export class RepoBinder<T extends Disposable> {
+  #boundRootPath: string | undefined;
+  #boundListener: T | undefined;
+
+  constructor(private readonly targetPath: string) {}
+
+  get boundRootPath(): string | undefined {
+    return this.#boundRootPath;
+  }
+
+  /**
+   * Attempt to bind `candidateRootPath`. If it is a real match for the target
+   * path and at least as specific as whatever is currently bound, disposes
+   * the previous listener (if any), calls `subscribe()` to obtain the new
+   * one, and returns true. Otherwise leaves the current binding untouched and
+   * returns false — `subscribe()` is not called in that case.
+   *
+   * A STRICTLY LESS specific candidate (shorter root) is rejected, so an
+   * outer repo can never steal the binding from an already-bound inner one.
+   * An EQUALLY specific candidate (same root path) is always accepted and
+   * rebound: the Git extension can hand back a fresh Repository object for a
+   * root already seen — e.g. toggling `git.enabled` off then on — whose
+   * listener is a distinct subscription that must replace the old one, not
+   * be rejected as "no more specific than what's already bound".
+   */
+  tryBind(candidateRootPath: string, subscribe: () => T): boolean {
+    const isMatch = candidateRootPath === this.targetPath || this.targetPath.startsWith(`${candidateRootPath}/`);
+    if (!isMatch || (this.#boundRootPath !== undefined && candidateRootPath.length < this.#boundRootPath.length)) {
+      return false;
+    }
+    this.#boundListener?.dispose();
+    this.#boundRootPath = candidateRootPath;
+    this.#boundListener = subscribe();
+    return true;
+  }
+
+  dispose(): void {
+    this.#boundListener?.dispose();
+  }
+}

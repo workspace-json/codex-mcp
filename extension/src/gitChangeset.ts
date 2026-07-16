@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { pathsFromFsPaths } from "./changesetLogic.js";
+import { findDeepestRepoRoot, pathsFromFsPaths, RepoBinder } from "./changesetLogic.js";
 
 /**
  * Minimal typings for the built-in VS Code Git extension API.
@@ -68,6 +68,10 @@ export async function subscribeChangeset(
 ): Promise<vscode.Disposable> {
   const disposables: vscode.Disposable[] = [];
   const rootPath = folder.uri.fsPath;
+  // Enforces that only the most specific (deepest) matching repo is ever
+  // bound, disposing the previous repo's onDidChange listener the instant a
+  // more specific one takes over — see RepoBinder for why that matters.
+  const binder = new RepoBinder<vscode.Disposable>(rootPath);
 
   const emitCurrent = (repo?: Repository) => {
     try {
@@ -78,6 +82,17 @@ export async function subscribeChangeset(
     }
   };
 
+  // Binds to `repo` and starts tracking its changes, but only if `repo`'s root
+  // is a real match for rootPath AND at least as specific as whatever is
+  // currently bound (never the first-in-array match — see findDeepestRepoRoot).
+  // A repo reopening at an already-bound root (e.g. a git.enabled toggle)
+  // still rebinds, since RepoBinder treats equal specificity as a refresh.
+  const bindIfMoreSpecific = (repo: Repository): boolean =>
+    binder.tryBind(repo.rootUri.fsPath, () => {
+      emitCurrent(repo);
+      return repo.state.onDidChange(() => emitCurrent(repo));
+    });
+
   try {
     const git = await getGitExtension();
     if (!git) {
@@ -86,21 +101,18 @@ export async function subscribeChangeset(
     }
 
     const api = git.getAPI(1);
-    const repo = api.repositories.find(
-      (r) => r.rootUri.fsPath === rootPath || rootPath.startsWith(r.rootUri.fsPath + "/"),
+    const repo = findDeepestRepoRoot(
+      api.repositories.map((r) => ({ rootPath: r.rootUri.fsPath, value: r })),
+      rootPath,
     );
     if (repo) {
-      emitCurrent(repo);
-      disposables.push(repo.state.onDidChange(() => emitCurrent(repo)));
+      bindIfMoreSpecific(repo);
     } else {
       emitCurrent();
     }
 
     const openListener = api.onDidOpenRepository((r) => {
-      if (rootPath === r.rootUri.fsPath || rootPath.startsWith(r.rootUri.fsPath + "/")) {
-        emitCurrent(r);
-        disposables.push(r.state.onDidChange(() => emitCurrent(r)));
-      }
+      bindIfMoreSpecific(r);
     });
     disposables.push(openListener);
 
@@ -115,6 +127,7 @@ export async function subscribeChangeset(
 
   return {
     dispose: () => {
+      binder.dispose();
       for (const d of disposables) d.dispose();
     },
   };
