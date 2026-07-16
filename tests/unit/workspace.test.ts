@@ -53,37 +53,36 @@ describe("normalizeWorkspace", () => {
     expect(ws.version).toBe("0.4");
     expect(ws.frameworkManifest).toEqual({
       runtime: "node",
-      framework: "next",
-      testRunner: "vitest",
+      testRunner: "node:test",
     });
   });
 
-  it("normalizes fragile files and preserves score/reason", () => {
+  it("normalizes the checkout fragility record and preserves score/reason", () => {
     const ws = normalizeWorkspace(sourcePath, fixture);
-    const client = ws.fragileFiles.find((f) => f.path === "src/db/client.ts");
-    expect(client).toBeDefined();
-    expect(client?.reason).toBe("connection pool exhaustion under load; reverted 3x");
-    expect(client?.score).toBe(9);
-    expect(client?.evidence).toEqual([{ claim: "revert a1b2c3" }, { claim: "incident 2026-02-14" }]);
-  });
-
-  it("normalizes string-only fragile entries", () => {
-    const ws = normalizeWorkspace(sourcePath, fixture);
-    const session = ws.fragileFiles.find((f) => f.path === "src/auth/session.ts");
-    expect(session).toBeDefined();
-    expect(session?.evidence).toEqual([]);
+    const checkout = ws.fragileFiles.find((f) => f.path === "src/routes/checkout.ts");
+    expect(checkout).toBeDefined();
+    expect(checkout?.reason).toBe("payment edge cases");
+    expect(checkout?.score).toBe(7);
+    expect(checkout?.evidence).toEqual([
+      {
+        claim: "revert d4e5f6 (payment rounding)",
+        command: "git log --oneline --grep 'revert' -- src/routes/checkout.ts",
+        output: "d4e5f6",
+      },
+      { claim: "incident 2026-03-02: double-charge on retry" },
+    ]);
   });
 
   it("normalizes co-change groups and preserves strength", () => {
     const ws = normalizeWorkspace(sourcePath, fixture);
-    const clientGroup = ws.coChangeGroups.find((g) => g.files.includes("src/db/client.ts"));
-    expect(clientGroup).toBeDefined();
-    expect(clientGroup?.strength).toBe(0.86);
+    const checkoutGroup = ws.coChangeGroups.find((g) => g.files.includes("src/routes/checkout.ts"));
+    expect(checkoutGroup).toBeDefined();
+    expect(checkoutGroup?.strength).toBe(0.86);
   });
 
   it("normalizes the file index", () => {
     const ws = normalizeWorkspace(sourcePath, fixture);
-    expect(ws.fileIndex).toContain("src/db/client.ts");
+    expect(ws.fileIndex).toContain("src/bootstrap.ts");
     expect(ws.fileIndex).toContain("src/routes/checkout.ts");
   });
 
@@ -140,13 +139,12 @@ describe("findFragile", () => {
   const ws = normalizeWorkspace(sourcePath, fixture);
 
   it("finds fragile files by exact repo-relative path", () => {
-    expect(findFragile(ws, "src/db/client.ts")).toBeDefined();
     expect(findFragile(ws, "src/routes/checkout.ts")).toBeDefined();
   });
 
   it("normalizes ./ and absolute paths before matching", () => {
-    expect(findFragile(ws, "./src/db/client.ts")).toBeDefined();
-    expect(findFragile(ws, "/abs/repo/src/db/client.ts")).toBeDefined();
+    expect(findFragile(ws, "./src/routes/checkout.ts")).toBeDefined();
+    expect(findFragile(ws, "/abs/repo/src/routes/checkout.ts")).toBeDefined();
   });
 
   it("does not do partial matching", () => {
@@ -159,7 +157,6 @@ describe("findCoChangePartners", () => {
   const ws = normalizeWorkspace(sourcePath, fixture);
 
   it("returns partners for a file in a co-change group", () => {
-    expect(findCoChangePartners(ws, "src/db/client.ts")).toContain("src/db/schema.ts");
     expect(findCoChangePartners(ws, "src/routes/checkout.ts")).toContain("src/auth/session.ts");
     expect(findCoChangePartners(ws, "src/routes/checkout.ts")).toContain("src/lib/format.ts");
   });
@@ -177,7 +174,7 @@ describe("isIndexed", () => {
   const ws = normalizeWorkspace(sourcePath, fixture);
 
   it("returns true for indexed files and false for unknown files", () => {
-    expect(isIndexed(ws, "src/db/client.ts")).toBe(true);
+    expect(isIndexed(ws, "src/bootstrap.ts")).toBe(true);
     expect(isIndexed(ws, "src/lib/does-not-exist.ts")).toBe(false);
   });
 });

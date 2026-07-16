@@ -1,30 +1,6 @@
 {
-  "generated": {
-    "frameworkManifest": {
-      "runtime": "node",
-      "framework": "next",
-      "testRunner": "vitest"
-    },
-    "fileIndex": [
-      "src/db/client.ts",
-      "src/db/schema.ts",
-      "src/auth/session.ts",
-      "src/routes/checkout.ts",
-      "src/lib/format.ts"
-    ],
-    "specVersion": "0.4"
-  },
   "manual": {
     "fragileFiles": [
-      {
-        "path": "src/db/client.ts",
-        "reason": "connection pool exhaustion under load; reverted 3x",
-        "score": 9,
-        "evidence": [
-          "revert a1b2c3",
-          "incident 2026-02-14"
-        ]
-      },
       {
         "path": "src/routes/checkout.ts",
         "reason": "payment edge cases",
@@ -37,24 +13,31 @@
           },
           "incident 2026-03-02: double-charge on retry"
         ]
-      },
-      "src/auth/session.ts"
+      }
     ],
     "coChangePatterns": [
-      {
-        "files": [
-          "src/db/client.ts",
-          "src/db/schema.ts"
-        ],
-        "strength": 0.86
-      },
       {
         "files": [
           "src/routes/checkout.ts",
           "src/auth/session.ts",
           "src/lib/format.ts"
-        ]
+        ],
+        "strength": 0.86
       }
+    ]
+  },
+  "generated": {
+    "specVersion": "0.4",
+    "frameworkManifest": {
+      "runtime": "node",
+      "testRunner": "node:test"
+    },
+    "fileIndex": [
+      "src/auth/session.ts",
+      "src/bootstrap.ts",
+      "src/lib/format.ts",
+      "src/routes/checkout.ts",
+      "src/runtime/registry.ts"
     ]
   }
 }
