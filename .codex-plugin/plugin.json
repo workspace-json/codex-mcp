@@ -1,6 +1,6 @@
 {
   "name": "workspace-json",
-  "version": "0.1.0",
+  "version": "0.1.0+codex.20260716043735",
   "description": "Portable codebase intelligence and behavioral risk checks for coding agents. Fragility and co-change history from workspace.json, enforced via deterministic pre-edit hooks with mechanically derived evidence tiers.",
   "author": {
     "name": "workspace.json",
@@ -9,7 +9,12 @@
   "license": "Apache-2.0",
   "repository": "https://github.com/workspace-json/codex-mcp",
   "homepage": "https://workspacejson.dev",
-  "keywords": ["codebase-intelligence", "agent-memory", "risk", "workspace-json"],
+  "keywords": [
+    "codebase-intelligence",
+    "agent-memory",
+    "risk",
+    "workspace-json"
+  ],
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json",
   "interface": {
@@ -18,8 +23,14 @@
     "longDescription": "Read portable workspace.json evidence before supported edits, surface fragility and co-change context, and deterministically block evidenced partner omissions.",
     "developerName": "workspace.json",
     "category": "Developer Tools",
-    "capabilities": ["Read", "Review"],
+    "capabilities": [
+      "Read",
+      "Review"
+    ],
     "websiteURL": "https://workspacejson.dev",
+    "brandColor": "#07100E",
+    "composerIcon": "./extension/assets/icon.png",
+    "logo": "./extension/assets/icon.png",
     "defaultPrompt": [
       "Review this proposed change using workspace.json evidence.",
       "Show fragile files and their recorded co-change partners.",

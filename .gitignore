@@ -21,6 +21,12 @@ hac120-desktop.png
 # Local Codex transcript-processing scratchwork may contain prompts and tool traces.
 /scripts/extract-session*.mjs
 
+# Local Codex hooks and agent configuration are machine-specific, not product source.
+/.codex/
+
+# Local npm package artifacts are generated release inputs, not source.
+/*.tgz
+
 # Private Codex workflow guidance stays available in this checkout, not the OSS repo.
 /AGENTS.local.md
 /.agents/skills/
