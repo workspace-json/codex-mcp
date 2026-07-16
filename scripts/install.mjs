@@ -92,6 +92,11 @@ function findBundledVsix() {
     }
   }
   if (found.length === 0) return null;
+  // HAZARD: lexicographic, not semver, sort. Picks the wrong "latest" VSIX
+  // (e.g. ...-0.9.0.vsix over ...-0.10.0.vsix) the day two bundled versions
+  // ever coexist. Currently unreachable — exactly one VSIX ships per install
+  // — so this is a tracked deferral, not a fix: swap for a real semver
+  // comparison before a second bundled version is ever possible.
   found.sort();
   const path = found[found.length - 1];
   return { path, version: vsixVersion(path) };
@@ -560,14 +565,16 @@ const USAGE = [
 
 async function main() {
   const argv = process.argv.slice(2);
-  // server/review consume their own remaining args and never take install flags.
-  const reviewIndex = argv.indexOf("review");
-  if (argv.includes("server")) {
+  // server/review are commands, matched only in first position — never by
+  // scanning argv, which would let a flag VALUE (e.g. `--vsix server`)
+  // hijack dispatch into a different program than the one requested.
+  const [command, ...rest] = argv;
+  if (command === "server") {
     await runServer();
     return;
   }
-  if (reviewIndex !== -1) {
-    await runReview(argv.slice(reviewIndex + 1));
+  if (command === "review") {
+    await runReview(rest);
     return;
   }
 

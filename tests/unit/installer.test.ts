@@ -59,6 +59,30 @@ describe("fallback installer", () => {
     expect(readFileSync(configPath, "utf8")).not.toContain("workspacejson-codex-mcp PreToolUse hook");
   });
 
+  it("dispatches on positional command only, so a flag value named 'server' cannot hijack install into runServer", () => {
+    const target = mkdtempSync(resolve(tmpdir(), "wjson-install-dispatch-"));
+    created.push(target);
+    writeFileSync(resolve(target, "package.json"), "{}\n");
+    const codexDir = resolve(target, ".codex");
+    mkdirSync(codexDir, { recursive: true });
+    const configPath = resolve(codexDir, "config.toml");
+
+    // --vsix takes an arbitrary path argument; "server" is a plausible value
+    // and must not be mistaken for the `server` subcommand. A 10s timeout
+    // guards against the pre-fix behavior, which hangs on runServer()'s stdio
+    // server instead of exiting.
+    const result = spawnSync("node", [resolve(process.cwd(), "scripts/install.mjs"), "install", "--vsix", "server"], {
+      cwd: target,
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+
+    expect(result.signal, result.stderr).toBeNull();
+    expect(result.status, result.stderr).toBe(0);
+    const config = readFileSync(configPath, "utf8");
+    expect(config).toContain("[mcp_servers.workspacejson]");
+  });
+
   it("refuses to overwrite or remove unmanaged same-name configuration", () => {
     const target = mkdtempSync(resolve(tmpdir(), "wjson-collision-"));
     created.push(target);
