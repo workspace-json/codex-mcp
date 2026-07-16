@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-07-16
+
+### Fixed
+
+- Corrected judge-facing package references from `example/` to the tracked `fixture/`.
+- Packaged the plugin manifest icon asset so its icon paths resolve from the npm tarball.
+- Prepared the extension's staged advisory-review command to use `@workspacejson/codex-mcp`.
+
 ### Added
 
 - CI workflow with build, smoke, and `npm pack --dry-run` verification.

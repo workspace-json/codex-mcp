@@ -98,8 +98,13 @@
     "viewsWelcome": [
       {
         "view": "workspacejsonCodexChangeset",
+        "when": "workspacejsonCodex.viewState == noFile",
+        "contents": "No `.agents/workspace.json` was found.\n\nThe generator derives repository structure; humans or an observer author evidence. It leaves `manual` empty on purpose: guessed churn signals have no evidence records, remain ASSERTED, and cannot block. See [`fixture/`](https://github.com/workspace-json/codex-mcp/tree/main/fixture) for a worked example.\n\n[Getting Started](command:workspacejson.openWalkthrough)"
+      },
+      {
+        "view": "workspacejsonCodexChangeset",
         "when": "workspacejsonCodex.viewState == noEvidence",
-        "contents": "No `.agents/workspace.json` was found.\n\nworkspace.json provides portable repository evidence for the file you are changing.\n\n[Open workspace.json](command:workspacejson.openIntelligenceFile)\n[Getting Started](command:workspacejson.openWalkthrough)"
+        "contents": "Repository evidence is unavailable or stale. No deterministic assessment is being inferred.\n\n[Getting Started](command:workspacejson.openWalkthrough)"
       },
       {
         "view": "workspacejsonCodexChangeset",
@@ -109,7 +114,7 @@
       {
         "view": "workspacejsonCodexChangeset",
         "when": "workspacejsonCodex.viewState == malformed",
-        "contents": "`.agents/workspace.json` could not be read.\n\nDeterministic assessment is unavailable until the file is corrected.\n\n[Open workspace.json](command:workspacejson.openIntelligenceFile)"
+        "contents": "`.agents/workspace.json` could not be read.\n\nDeterministic assessment is unavailable until the file is corrected.\n\n[Getting Started](command:workspacejson.openWalkthrough)"
       }
     ],
     "walkthroughs": [

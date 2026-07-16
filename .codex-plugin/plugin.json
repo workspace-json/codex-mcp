@@ -29,8 +29,8 @@
     ],
     "websiteURL": "https://workspacejson.dev",
     "brandColor": "#07100E",
-    "composerIcon": "./extension/assets/icon.png",
-    "logo": "./extension/assets/icon.png",
+    "composerIcon": "./assets/marketplace-icon.svg",
+    "logo": "./assets/marketplace-icon.svg",
     "defaultPrompt": [
       "Review this proposed change using workspace.json evidence.",
       "Show fragile files and their recorded co-change partners.",

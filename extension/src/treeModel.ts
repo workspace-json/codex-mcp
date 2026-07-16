@@ -188,10 +188,11 @@ export function buildTree(view: IntelligenceView): PlainNode[] {
  * availability deliberately does NOT empty the view — deterministic assessment
  * stays visible even when the advisory reviewer is unavailable.
  */
-export type ViewState = "malformed" | "noEvidence" | "noChange" | "active";
+export type ViewState = "malformed" | "noFile" | "noEvidence" | "noChange" | "active";
 
 export function viewStateFor(view: IntelligenceView): ViewState {
   if (view.source.availability === "FAILED") return "malformed";
+  if (view.source.availability === "UNAVAILABLE") return "noFile";
   if (view.source.availability !== "AVAILABLE") return "noEvidence";
   if (!view.currentChange.changesetKnown) return "noChange";
   if (view.currentChange.decision === "IDLE") return "noChange";
