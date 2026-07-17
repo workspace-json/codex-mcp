@@ -31,7 +31,10 @@ function terminal(name: string): vscode.Terminal {
  * execution), leaving the developer in control of running it.
  */
 export function registerCommands(model: WorkspaceIntelligenceModel, context: vscode.ExtensionContext): void {
-  const channel = vscode.window.createOutputChannel("workspace.json");
+  // languageId "yaml" (built into VS Code, no dependency) colors the existing
+  // `key: value` evidence lines for free — not LogOutputChannel, which would
+  // prepend a timestamp to every line and imply a live log this isn't (§6.3).
+  const channel = vscode.window.createOutputChannel("workspace.json", "yaml");
   context.subscriptions.push(channel);
 
   const register = (id: string, handler: (...args: unknown[]) => void | Promise<void>) =>
