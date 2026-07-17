@@ -155,8 +155,7 @@ check(
 );
 check(
   "list_fragile_files surfaces bounded framework context",
-  lf.structuredContent?.framework?.runtime === "node" &&
-    lf.structuredContent?.framework?.testRunner === "node:test",
+  lf.structuredContent?.framework?.runtime === "node" && lf.structuredContent?.framework?.testRunner === "node:test",
   JSON.stringify(lf.structuredContent?.framework),
 );
 

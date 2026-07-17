@@ -9,12 +9,7 @@
   "license": "Apache-2.0",
   "repository": "https://github.com/workspace-json/codex-mcp",
   "homepage": "https://workspacejson.dev",
-  "keywords": [
-    "codebase-intelligence",
-    "agent-memory",
-    "risk",
-    "workspace-json"
-  ],
+  "keywords": ["codebase-intelligence", "agent-memory", "risk", "workspace-json"],
   "mcpServers": "./.mcp.json",
   "hooks": "./hooks/hooks.json",
   "interface": {
@@ -23,10 +18,7 @@
     "longDescription": "Read portable workspace.json evidence before supported edits, surface fragility and co-change context, and deterministically block evidenced partner omissions.",
     "developerName": "workspace.json",
     "category": "Developer Tools",
-    "capabilities": [
-      "Read",
-      "Review"
-    ],
+    "capabilities": ["Read", "Review"],
     "websiteURL": "https://workspacejson.dev",
     "brandColor": "#07100E",
     "composerIcon": "./assets/marketplace-icon.svg",
