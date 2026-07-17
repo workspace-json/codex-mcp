@@ -1,8 +1,8 @@
 name: Publish extension
 
 # One tagged release ships the VS Code extension to both marketplaces.
-#   git tag v0.1.3 && git push --tags
-# The version is taken from the tag (v0.1.3 -> 0.1.3), validated, written into
+#   git tag extension-v0.1.3 && git push --tags
+# The version is taken from the tag (extension-v0.1.3 -> 0.1.3), validated, written into
 # the manifest at build time, and published as a pre-built VSIX. No hand-run
 # publish commands.
 #
@@ -13,7 +13,7 @@ name: Publish extension
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "extension-v*.*.*"
 
 permissions:
   contents: write # create the GitHub Release and attach the VSIX
@@ -42,9 +42,9 @@ jobs:
         env:
           REF_NAME: ${{ github.ref_name }}
         run: |
-          VERSION="${REF_NAME#v}"
+          VERSION="${REF_NAME#extension-v}"
           if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'; then
-            echo "::error::tag '$REF_NAME' is not a valid vX.Y.Z version"
+            echo "::error::tag '$REF_NAME' is not a valid extension-vX.Y.Z version"
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"

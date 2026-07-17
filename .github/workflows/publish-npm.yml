@@ -1,0 +1,65 @@
+name: Publish npm package
+
+# `codex-mcp-vX.Y.Z` tags publish only @workspacejson/codex-mcp. Extension
+# releases use `extension-vX.Y.Z`, so an npm release can never publish a VSIX.
+on:
+  push:
+    tags:
+      - "codex-mcp-v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-npm-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Derive and validate release version
+        id: version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          VERSION="${REF_NAME#codex-mcp-v}"
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'; then
+            echo "::error::tag '$REF_NAME' is not a valid codex-mcp-vX.Y.Z version"
+            exit 1
+          fi
+          test "$(node -p "require('./package.json').version")" = "$VERSION" || {
+            echo "::error::tag version does not match package.json"
+            exit 1
+          }
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - run: npm ci
+      - name: Run publish gate
+        run: npm run prepublishOnly
+      - name: Pack and inspect release tarball
+        run: |
+          mkdir -p /tmp/workspacejson-release
+          npm pack --pack-destination /tmp/workspacejson-release
+          TAR="/tmp/workspacejson-release/workspacejson-codex-mcp-${{ steps.version.outputs.version }}.tgz"
+          test -f "$TAR"
+          tar -tzf "$TAR" | grep -F 'package/.codex-plugin/assets/marketplace-icon.svg'
+          tar -tzf "$TAR" | grep -F 'package/hooks/pre-edit-check.mjs'
+      - name: Install packed artifact in a clean project
+        run: |
+          mkdir -p /tmp/workspacejson-release/install
+          npm install --prefix /tmp/workspacejson-release/install \
+            /tmp/workspacejson-release/workspacejson-codex-mcp-${{ steps.version.outputs.version }}.tgz
+          test -x /tmp/workspacejson-release/install/node_modules/.bin/codex-mcp
+          /tmp/workspacejson-release/install/node_modules/.bin/codex-mcp --help >/dev/null
+      - name: Publish package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

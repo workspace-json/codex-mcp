@@ -1,0 +1,8 @@
+{
+  "name": "workspacejson-checkout-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types test/checkout.check.ts"
+  }
+}

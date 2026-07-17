@@ -54,7 +54,7 @@ test("viewStateFor: availability and change map to the right welcome/active stat
   const failed: SourceState = { path: ".agents/workspace.json", availability: "FAILED", error: "malformed" };
   const gone: SourceState = { path: ".agents/workspace.json", availability: "UNAVAILABLE" };
   assert.equal(viewStateFor(viewFor(failed, snap, new Set(["a.ts"]))), "malformed");
-  assert.equal(viewStateFor(viewFor(gone, snap, new Set(["a.ts"]))), "noEvidence");
+  assert.equal(viewStateFor(viewFor(gone, snap, new Set(["a.ts"]))), "noFile");
   assert.equal(viewStateFor(viewFor(AVAILABLE, snap, new Set())), "noChange"); // available, nothing changed
   assert.equal(viewStateFor(viewFor(AVAILABLE, snap, undefined)), "noChange"); // git unknown
   assert.equal(viewStateFor(viewFor(AVAILABLE, snap, new Set(["a.ts"]))), "active"); // DENY

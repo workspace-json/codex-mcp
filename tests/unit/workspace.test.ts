@@ -47,44 +47,46 @@ describe("normalizeWorkspace", () => {
     expect(() => normalizeWorkspace(sourcePath, raw)).toThrow("must be an object");
   });
 
-  it("normalizes the fixture workspace with generated version and framework manifest", () => {
+  it("normalizes the fixture workspace with the generated section produced by the real agents-audit generate", () => {
     const ws = normalizeWorkspace(sourcePath, fixture);
     expect(ws.sourcePath).toBe(sourcePath);
-    expect(ws.version).toBe("0.4");
-    expect(ws.frameworkManifest).toEqual({
-      runtime: "node",
-      framework: "next",
-      testRunner: "vitest",
-    });
+    expect(ws.version).toBe("0.3");
+    // The real producer emits frameworkManifest as an array of detected frameworks
+    // (schema v1), not the legacy {runtime,testRunner} record; a fresh scan of this
+    // small fixture detects none, so it degrades to undefined rather than a record.
+    expect(ws.frameworkManifest).toBeUndefined();
   });
 
-  it("normalizes fragile files and preserves score/reason", () => {
+  it("normalizes the checkout fragility record and preserves score/reason", () => {
     const ws = normalizeWorkspace(sourcePath, fixture);
-    const client = ws.fragileFiles.find((f) => f.path === "src/db/client.ts");
-    expect(client).toBeDefined();
-    expect(client?.reason).toBe("connection pool exhaustion under load; reverted 3x");
-    expect(client?.score).toBe(9);
-    expect(client?.evidence).toEqual([{ claim: "revert a1b2c3" }, { claim: "incident 2026-02-14" }]);
-  });
-
-  it("normalizes string-only fragile entries", () => {
-    const ws = normalizeWorkspace(sourcePath, fixture);
-    const session = ws.fragileFiles.find((f) => f.path === "src/auth/session.ts");
-    expect(session).toBeDefined();
-    expect(session?.evidence).toEqual([]);
+    const checkout = ws.fragileFiles.find((f) => f.path === "src/routes/checkout.ts");
+    expect(checkout).toBeDefined();
+    expect(checkout?.reason).toBe("payment edge cases");
+    expect(checkout?.score).toBe(7);
+    expect(checkout?.evidence).toEqual([
+      {
+        claim: "revert d4e5f6 (payment rounding)",
+        command: "git log --oneline --grep 'revert' -- src/routes/checkout.ts",
+        output: "d4e5f6",
+      },
+      { claim: "incident 2026-03-02: double-charge on retry" },
+    ]);
   });
 
   it("normalizes co-change groups and preserves strength", () => {
     const ws = normalizeWorkspace(sourcePath, fixture);
-    const clientGroup = ws.coChangeGroups.find((g) => g.files.includes("src/db/client.ts"));
-    expect(clientGroup).toBeDefined();
-    expect(clientGroup?.strength).toBe(0.86);
+    const checkoutGroup = ws.coChangeGroups.find((g) => g.files.includes("src/routes/checkout.ts"));
+    expect(checkoutGroup).toBeDefined();
+    expect(checkoutGroup?.strength).toBe(0.86);
   });
 
-  it("normalizes the file index", () => {
+  it("normalizes the file index as empty for a fresh scan with no observation history", () => {
+    // The real generated.fileIndex (schema v1) is per-file behavioral intelligence
+    // (fragility, modification counts), not a static list of paths in the repo — a
+    // fresh generate on this fixture has no history to report, so it is genuinely
+    // empty. "Indexed" here is independent of, and not required by, manual fragility.
     const ws = normalizeWorkspace(sourcePath, fixture);
-    expect(ws.fileIndex).toContain("src/db/client.ts");
-    expect(ws.fileIndex).toContain("src/routes/checkout.ts");
+    expect(ws.fileIndex).toEqual([]);
   });
 
   it("tolerates legacy and alternative shapes", () => {
@@ -121,6 +123,22 @@ describe("normalizeWorkspace", () => {
     expect(ws.frameworkManifest).toEqual({ runtime: "node" });
   });
 
+  it("normalizes a legacy array-shaped fileIndex (a flat list of paths, not the real spec's keyed-object shape)", () => {
+    const raw = { generated: { fileIndex: ["src/one.ts", "src/two.ts"] } };
+    const ws = normalizeWorkspace("/tmp/workspace.json", raw);
+    expect(ws.fileIndex).toEqual(["src/one.ts", "src/two.ts"]);
+  });
+
+  it("degrades an array-shaped frameworkManifest (the real spec's schema, a list of detected frameworks) to undefined instead of misreading it as the legacy {runtime,testRunner} record", () => {
+    const raw = {
+      generated: {
+        frameworkManifest: [{ name: "node", version: "22.0.0", confidence: 0.9 }],
+      },
+    };
+    const ws = normalizeWorkspace("/tmp/workspace.json", raw);
+    expect(ws.frameworkManifest).toBeUndefined();
+  });
+
   it("tolerates an adjacency map for co-change patterns", () => {
     const raw = {
       manual: {
@@ -140,13 +158,12 @@ describe("findFragile", () => {
   const ws = normalizeWorkspace(sourcePath, fixture);
 
   it("finds fragile files by exact repo-relative path", () => {
-    expect(findFragile(ws, "src/db/client.ts")).toBeDefined();
     expect(findFragile(ws, "src/routes/checkout.ts")).toBeDefined();
   });
 
   it("normalizes ./ and absolute paths before matching", () => {
-    expect(findFragile(ws, "./src/db/client.ts")).toBeDefined();
-    expect(findFragile(ws, "/abs/repo/src/db/client.ts")).toBeDefined();
+    expect(findFragile(ws, "./src/routes/checkout.ts")).toBeDefined();
+    expect(findFragile(ws, "/abs/repo/src/routes/checkout.ts")).toBeDefined();
   });
 
   it("does not do partial matching", () => {
@@ -159,7 +176,6 @@ describe("findCoChangePartners", () => {
   const ws = normalizeWorkspace(sourcePath, fixture);
 
   it("returns partners for a file in a co-change group", () => {
-    expect(findCoChangePartners(ws, "src/db/client.ts")).toContain("src/db/schema.ts");
     expect(findCoChangePartners(ws, "src/routes/checkout.ts")).toContain("src/auth/session.ts");
     expect(findCoChangePartners(ws, "src/routes/checkout.ts")).toContain("src/lib/format.ts");
   });
@@ -174,10 +190,17 @@ describe("findCoChangePartners", () => {
 });
 
 describe("isIndexed", () => {
-  const ws = normalizeWorkspace(sourcePath, fixture);
-
-  it("returns true for indexed files and false for unknown files", () => {
-    expect(isIndexed(ws, "src/db/client.ts")).toBe(true);
+  it("returns true only for paths present in generated.fileIndex", () => {
+    const ws = normalizeWorkspace("/tmp/workspace.json", {
+      generated: { fileIndex: { "src/bootstrap.ts": {} } },
+    });
+    expect(isIndexed(ws, "src/bootstrap.ts")).toBe(true);
     expect(isIndexed(ws, "src/lib/does-not-exist.ts")).toBe(false);
+  });
+
+  it("returns false for every file on the fixture's fresh-scan (empty) file index", () => {
+    const ws = normalizeWorkspace(sourcePath, fixture);
+    expect(isIndexed(ws, "src/bootstrap.ts")).toBe(false);
+    expect(isIndexed(ws, "src/routes/checkout.ts")).toBe(false);
   });
 });

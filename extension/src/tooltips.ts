@@ -48,6 +48,9 @@ export function decisionTooltip(file: ChangesetFile): string {
 
 /** A single co-change partner omitted from the current change (the file itself exists). */
 export function partnerTooltip(partnerPath: string, parent: ChangesetFile): string {
+  const evidence = parent.file.evidenceClaims.length > 0
+    ? ["", "**Recorded evidence**", "", ...parent.file.evidenceClaims.map((claim) => `- ${claim}`)]
+    : [];
   return [
     "$(circle-outline) **Evidenced partner omitted**",
     "",
@@ -56,6 +59,7 @@ export function partnerTooltip(partnerPath: string, parent: ChangesetFile): stri
     `Recorded co-change partner of \`${baseName(parent.path)}\` · ${tierBadge(parent.file.tier)}`,
     "",
     "Not in the current change. Select this row to open the file.",
+    ...evidence,
     "",
     evidenceLine("Inspect evidence", COMMAND_IDS.inspectEvidence),
   ].join("\n");

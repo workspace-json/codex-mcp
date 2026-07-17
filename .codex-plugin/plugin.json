@@ -1,6 +1,6 @@
 {
   "name": "workspace-json",
-  "version": "0.1.0",
+  "version": "0.1.0+codex.20260716043735",
   "description": "Portable codebase intelligence and behavioral risk checks for coding agents. Fragility and co-change history from workspace.json, enforced via deterministic pre-edit hooks with mechanically derived evidence tiers.",
   "author": {
     "name": "workspace.json",
@@ -20,6 +20,9 @@
     "category": "Developer Tools",
     "capabilities": ["Read", "Review"],
     "websiteURL": "https://workspacejson.dev",
+    "brandColor": "#07100E",
+    "composerIcon": "./assets/marketplace-icon.svg",
+    "logo": "./assets/marketplace-icon.svg",
     "defaultPrompt": [
       "Review this proposed change using workspace.json evidence.",
       "Show fragile files and their recorded co-change partners.",

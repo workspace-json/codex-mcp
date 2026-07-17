@@ -43,7 +43,7 @@ check(
 );
 
 // ── Tier derivation through file context ──
-const r1 = await client.callTool({ name: "workspace_get_file_context", arguments: { path: "src/db/client.ts" } });
+const r1 = await client.callTool({ name: "workspace_get_file_context", arguments: { path: "src/routes/checkout.ts" } });
 const s1 = r1.structuredContent;
 check("evidenced fragile -> tier OBSERVED", s1?.fragility?.tier === "OBSERVED", JSON.stringify(s1?.fragility));
 check(
@@ -51,24 +51,20 @@ check(
   s1?.fragility?.evidence?.[0]?.claim?.includes("revert"),
   JSON.stringify(s1?.fragility?.evidence),
 );
-check("fragile file -> co-change partner schema.ts", s1?.coChangePartners?.includes("src/db/schema.ts"));
-
-const r2 = await client.callTool({ name: "workspace_get_file_context", arguments: { path: "src/auth/session.ts" } });
-check(
-  "bare-string fragile -> tier ASSERTED",
-  r2.structuredContent?.fragility?.tier === "ASSERTED",
-  JSON.stringify(r2.structuredContent?.fragility),
-);
+check("fragile file -> co-change partner session.ts", s1?.coChangePartners?.includes("src/auth/session.ts"));
 
 // ── META-102 matching contract ──
-const r3 = await client.callTool({ name: "workspace_get_file_context", arguments: { path: "./src/db/client.ts" } });
+const r3 = await client.callTool({
+  name: "workspace_get_file_context",
+  arguments: { path: "./src/routes/checkout.ts" },
+});
 check("leading ./ normalizes to exact key match", r3.structuredContent?.fragile === true);
 const r4 = await client.callTool({
   name: "workspace_get_file_context",
-  arguments: { path: "/abs/repo/src/db/client.ts" },
+  arguments: { path: "/abs/repo/src/routes/checkout.ts" },
 });
 check("absolute path falls back to boundary suffix match", r4.structuredContent?.fragile === true);
-const r5 = await client.callTool({ name: "workspace_get_file_context", arguments: { path: "db/client.ts" } });
+const r5 = await client.callTool({ name: "workspace_get_file_context", arguments: { path: "routes/checkout.ts" } });
 check(
   "bare partial relative path does NOT match (exact-first, no fuzzy)",
   r5.structuredContent?.fragile === false,
@@ -153,13 +149,16 @@ check(
 );
 const lf = await client.callTool({ name: "workspace_list_fragile_files", arguments: {} });
 check(
-  "list_fragile_files returns total 3, sorted by score",
-  lf.structuredContent?.total === 3 && lf.structuredContent?.files?.[0]?.path === "src/db/client.ts",
+  "list_fragile_files returns the checkout scenario",
+  lf.structuredContent?.total === 1 && lf.structuredContent?.files?.[0]?.path === "src/routes/checkout.ts",
   JSON.stringify(lf.structuredContent?.files?.map((f) => f.path)),
 );
 check(
-  "list_fragile_files surfaces bounded framework context",
-  lf.structuredContent?.framework?.framework === "next" && lf.structuredContent?.framework?.testRunner === "vitest",
+  // The fixture's generated section is the real agents-audit generate output: a fresh
+  // scan with no observation history detects no frameworks (array frameworkManifest is
+  // empty), which normalizes to no legacy manifest rather than a fabricated runtime/testRunner.
+  "list_fragile_files reports no framework context when the producer detected none",
+  lf.structuredContent?.framework === null,
   JSON.stringify(lf.structuredContent?.framework),
 );
 

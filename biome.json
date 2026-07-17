@@ -21,6 +21,15 @@
   },
   "files": {
     "include": ["src", "tests", "scripts", "hooks", "*.json", "*.mjs", "*.ts"],
-    "ignore": [".claude", ".local", "dist", "node_modules", "fixture", "assets", "extension"]
+    "ignore": [
+      ".claude",
+      ".local",
+      "dist",
+      "node_modules",
+      "fixture",
+      "assets",
+      "extension",
+      "scripts/extract-session*.mjs"
+    ]
   }
 }

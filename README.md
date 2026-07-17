@@ -109,7 +109,7 @@ From a repo that has a committed `.agents/workspace.json`:
 2. Watch the hook refuse the patch, citing the recorded evidence and the co-change partner the change left out.
 3. Ask Codex to include the partner and retry — the edit proceeds.
 
-No configuration beyond step 1 above. The `example/` fixture in this repo reproduces the exact denial shown in the demo.
+No configuration beyond step 1 above. The `fixture/` in this repo reproduces the exact denial shown in the demo.
 
 </details>
 

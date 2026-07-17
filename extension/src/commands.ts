@@ -101,7 +101,7 @@ export function registerCommands(model: WorkspaceIntelligenceModel, context: vsc
 
   register(COMMAND_IDS.runReview, () => {
     const term = terminal(REVIEW_TERMINAL);
-    term.sendText("git diff | npx workspacejson-codex-mcp review --diff-stdin", false);
+    term.sendText("git diff | npx @workspacejson/codex-mcp review --diff-stdin", false);
     term.show();
     void vscode.window.showInformationMessage(
       "workspace.json: advisory review command staged in the terminal (requires OPENAI_API_KEY or OPENROUTER_API_KEY). Review it, then press Enter to run.",
