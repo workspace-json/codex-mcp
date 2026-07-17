@@ -9,9 +9,6 @@
     "vscode": "^1.85.0"
   },
   "categories": [
-    "Linters",
-    "SCM Providers",
-    "Testing",
     "Other"
   ],
   "keywords": [
