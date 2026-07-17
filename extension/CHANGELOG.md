@@ -8,6 +8,11 @@
 - This `CHANGELOG.md`, bundled into the VSIX for the Marketplace's Changelog tab.
 - `SUPPORT.md` — a plain support-links doc, kept out of the packaged VSIX via `.vscodeignore` (it isn't at a location GitHub recognizes as a community health file, so it isn't wired into any GitHub or Marketplace flow yet — it exists for a human to link to directly).
 
+### Changed
+
+- Renamed the "Getting Started" command to "Open Getting Started Walkthrough" for consistency with the other verb-first command titles.
+- The "Open Intelligence File" command's no-file warning now offers a "Getting Started" button instead of being a dead end.
+
 ## 0.1.0
 
 ### Added
