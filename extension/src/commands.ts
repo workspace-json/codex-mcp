@@ -60,7 +60,14 @@ export function registerCommands(model: WorkspaceIntelligenceModel, context: vsc
     try {
       await vscode.window.showTextDocument(uri);
     } catch {
-      void vscode.window.showWarningMessage("workspace.json: .agents/workspace.json was not found in this workspace.");
+      // Same next step the welcome states already offer (§4.2) — this command is
+      // reachable outside the tree view (Command Palette), so it shouldn't be the
+      // one dead end that doesn't point back to Getting Started.
+      const choice = await vscode.window.showWarningMessage(
+        "workspace.json: .agents/workspace.json was not found in this workspace.",
+        "Getting Started",
+      );
+      if (choice === "Getting Started") await vscode.commands.executeCommand(COMMAND_IDS.openWalkthrough);
     }
   });
 

@@ -121,7 +121,7 @@
       },
       {
         "command": "workspacejson.openWalkthrough",
-        "title": "Getting Started",
+        "title": "Open Getting Started Walkthrough",
         "category": "workspace.json"
       }
     ],
