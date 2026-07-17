@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.5] - 2026-07-16
+## [0.1.5] - 2026-07-17
 
 ### Fixed
 
 - Corrected judge-facing package references from `example/` to the tracked `fixture/`.
 - Packaged the plugin manifest icon asset so its icon paths resolve from the npm tarball.
 - Prepared the extension's staged advisory-review command to use `@workspacejson/codex-mcp`.
+- `normalizeWorkspace()` and the extension's `parseSnapshot()` each misread one of the two shapes real producers emit for `generated.fileIndex` and `generated.frameworkManifest`; both now read either shape correctly instead of silently degrading.
+- Regenerated the tracked demo fixture with the real, published `agents-audit@0.4.3 generate`, so it validates against the packaged `@workspacejson/spec` schema.
 
 ### Added
 
