@@ -9,8 +9,49 @@
     "vscode": "^1.85.0"
   },
   "categories": [
+    "Linters",
+    "SCM Providers",
+    "Testing",
     "Other"
   ],
+  "keywords": [
+    "workspace.json",
+    "code-review",
+    "fragility",
+    "co-change",
+    "agent-safety"
+  ],
+  "galleryBanner": {
+    "color": "#07100e",
+    "theme": "dark"
+  },
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/license-Apache--2.0-blue",
+      "href": "https://github.com/workspace-json/codex-mcp/blob/main/LICENSE",
+      "description": "License"
+    },
+    {
+      "url": "https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml/badge.svg",
+      "href": "https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml",
+      "description": "CI Status"
+    }
+  ],
+  "bugs": {
+    "url": "https://github.com/workspace-json/codex-mcp/issues"
+  },
+  "homepage": "https://workspacejson.dev/implementations/codex",
+  "pricing": "Free",
+  "preview": true,
+  "qna": false,
+  "markdown": "github",
+  "extensionKind": [
+    "workspace"
+  ],
+  "author": {
+    "name": "workspace.json",
+    "url": "https://workspacejson.dev"
+  },
   "main": "./out/src/extension.js",
   "activationEvents": [
     "onStartupFinished"
