@@ -47,14 +47,14 @@ describe("normalizeWorkspace", () => {
     expect(() => normalizeWorkspace(sourcePath, raw)).toThrow("must be an object");
   });
 
-  it("normalizes the fixture workspace with generated version and framework manifest", () => {
+  it("normalizes the fixture workspace with the generated section produced by the real agents-audit generate", () => {
     const ws = normalizeWorkspace(sourcePath, fixture);
     expect(ws.sourcePath).toBe(sourcePath);
-    expect(ws.version).toBe("0.4");
-    expect(ws.frameworkManifest).toEqual({
-      runtime: "node",
-      testRunner: "node:test",
-    });
+    expect(ws.version).toBe("0.3");
+    // The real producer emits frameworkManifest as an array of detected frameworks
+    // (schema v1), not the legacy {runtime,testRunner} record; a fresh scan of this
+    // small fixture detects none, so it degrades to undefined rather than a record.
+    expect(ws.frameworkManifest).toBeUndefined();
   });
 
   it("normalizes the checkout fragility record and preserves score/reason", () => {
@@ -80,10 +80,13 @@ describe("normalizeWorkspace", () => {
     expect(checkoutGroup?.strength).toBe(0.86);
   });
 
-  it("normalizes the file index", () => {
+  it("normalizes the file index as empty for a fresh scan with no observation history", () => {
+    // The real generated.fileIndex (schema v1) is per-file behavioral intelligence
+    // (fragility, modification counts), not a static list of paths in the repo — a
+    // fresh generate on this fixture has no history to report, so it is genuinely
+    // empty. "Indexed" here is independent of, and not required by, manual fragility.
     const ws = normalizeWorkspace(sourcePath, fixture);
-    expect(ws.fileIndex).toContain("src/bootstrap.ts");
-    expect(ws.fileIndex).toContain("src/routes/checkout.ts");
+    expect(ws.fileIndex).toEqual([]);
   });
 
   it("tolerates legacy and alternative shapes", () => {
@@ -118,6 +121,22 @@ describe("normalizeWorkspace", () => {
 
     expect(ws.fileIndex).toContain("src/legacy.ts");
     expect(ws.frameworkManifest).toEqual({ runtime: "node" });
+  });
+
+  it("normalizes a legacy array-shaped fileIndex (a flat list of paths, not the real spec's keyed-object shape)", () => {
+    const raw = { generated: { fileIndex: ["src/one.ts", "src/two.ts"] } };
+    const ws = normalizeWorkspace("/tmp/workspace.json", raw);
+    expect(ws.fileIndex).toEqual(["src/one.ts", "src/two.ts"]);
+  });
+
+  it("degrades an array-shaped frameworkManifest (the real spec's schema, a list of detected frameworks) to undefined instead of misreading it as the legacy {runtime,testRunner} record", () => {
+    const raw = {
+      generated: {
+        frameworkManifest: [{ name: "node", version: "22.0.0", confidence: 0.9 }],
+      },
+    };
+    const ws = normalizeWorkspace("/tmp/workspace.json", raw);
+    expect(ws.frameworkManifest).toBeUndefined();
   });
 
   it("tolerates an adjacency map for co-change patterns", () => {
@@ -171,10 +190,17 @@ describe("findCoChangePartners", () => {
 });
 
 describe("isIndexed", () => {
-  const ws = normalizeWorkspace(sourcePath, fixture);
-
-  it("returns true for indexed files and false for unknown files", () => {
+  it("returns true only for paths present in generated.fileIndex", () => {
+    const ws = normalizeWorkspace("/tmp/workspace.json", {
+      generated: { fileIndex: { "src/bootstrap.ts": {} } },
+    });
     expect(isIndexed(ws, "src/bootstrap.ts")).toBe(true);
     expect(isIndexed(ws, "src/lib/does-not-exist.ts")).toBe(false);
+  });
+
+  it("returns false for every file on the fixture's fresh-scan (empty) file index", () => {
+    const ws = normalizeWorkspace(sourcePath, fixture);
+    expect(isIndexed(ws, "src/bootstrap.ts")).toBe(false);
+    expect(isIndexed(ws, "src/routes/checkout.ts")).toBe(false);
   });
 });

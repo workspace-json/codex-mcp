@@ -149,7 +149,9 @@ export function normalizeWorkspace(sourcePath: string, parsed: unknown): Normali
 
   const frameworkRaw = generated.frameworkManifest;
   const frameworkManifest =
-    frameworkRaw && typeof frameworkRaw === "object" ? (frameworkRaw as FrameworkManifest) : undefined;
+    frameworkRaw && typeof frameworkRaw === "object" && !Array.isArray(frameworkRaw)
+      ? (frameworkRaw as FrameworkManifest)
+      : undefined;
 
   // STABLE SURFACE ONLY (per live-state audit): the four externally consumed
   // paths. health.*, sidecar files, generated.fragility, and generated.coChange

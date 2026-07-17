@@ -114,3 +114,13 @@ test("fileIndex normalizes entries and is queryable independent of fragileFiles"
   assert.equal(snapshot?.fileIndex.has("src/a.ts"), true);
   assert.equal(snapshot?.fileIndex.size, 1);
 });
+
+test("fileIndex extracts keys from the real spec's object shape (per-file behavioral intelligence keyed by path), not only the legacy array of paths", () => {
+  const snapshot = parseSnapshot({
+    manual: {},
+    generated: { fileIndex: { "src//a.ts": { fragility: 0.8, aiModificationCount: 3 }, "src/b.ts": {} } },
+  });
+  assert.equal(snapshot?.fileIndex.has("src/a.ts"), true);
+  assert.equal(snapshot?.fileIndex.has("src/b.ts"), true);
+  assert.equal(snapshot?.fileIndex.size, 2);
+});

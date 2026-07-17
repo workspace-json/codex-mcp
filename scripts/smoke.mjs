@@ -154,8 +154,11 @@ check(
   JSON.stringify(lf.structuredContent?.files?.map((f) => f.path)),
 );
 check(
-  "list_fragile_files surfaces bounded framework context",
-  lf.structuredContent?.framework?.runtime === "node" && lf.structuredContent?.framework?.testRunner === "node:test",
+  // The fixture's generated section is the real agents-audit generate output: a fresh
+  // scan with no observation history detects no frameworks (array frameworkManifest is
+  // empty), which normalizes to no legacy manifest rather than a fabricated runtime/testRunner.
+  "list_fragile_files reports no framework context when the producer detected none",
+  lf.structuredContent?.framework === null,
   JSON.stringify(lf.structuredContent?.framework),
 );
 

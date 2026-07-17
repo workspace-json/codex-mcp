@@ -135,7 +135,14 @@ export function parseSnapshot(raw: unknown): IntelligenceSnapshot | undefined {
     });
   }
 
-  const fileIndexRaw = Array.isArray(generated.fileIndex) ? generated.fileIndex : [];
+  // Legacy shape: array of path strings. Real spec shape: object of path -> per-file
+  // behavioral intelligence, keyed by relative path (values are not read here; presence
+  // in the index is the only thing this consumer needs, mirroring services/workspace.ts).
+  const fileIndexRaw: unknown[] = Array.isArray(generated.fileIndex)
+    ? generated.fileIndex
+    : generated.fileIndex && typeof generated.fileIndex === "object"
+      ? Object.keys(generated.fileIndex as Record<string, unknown>)
+      : [];
   const fileIndex = new Set(
     fileIndexRaw.filter((f): f is string => typeof f === "string").map(normalizeKey).filter(isValidRelativeKey),
   );

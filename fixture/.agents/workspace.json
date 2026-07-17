@@ -27,17 +27,34 @@
     ]
   },
   "generated": {
-    "specVersion": "0.4",
-    "frameworkManifest": {
-      "runtime": "node",
-      "testRunner": "node:test"
+    "specVersion": "0.3",
+    "generatedAt": "2026-07-17T10:59:30.129Z",
+    "by": {
+      "name": "agents-audit",
+      "version": "0.4.3"
     },
-    "fileIndex": [
-      "src/auth/session.ts",
-      "src/bootstrap.ts",
-      "src/lib/format.ts",
-      "src/routes/checkout.ts",
-      "src/runtime/registry.ts"
-    ]
+    "frameworkManifest": [],
+    "fileIndex": {},
+    "topology": {
+      "packageCount": 0,
+      "type": "single-package",
+      "ciProvider": "unknown",
+      "agentFiles": {
+        "workspaceJson": ".agents/workspace.json"
+      }
+    },
+    "hygiene": {
+      "score": 100,
+      "grade": "A",
+      "failCount": 0,
+      "warnCount": 0,
+      "scannedAt": "2026-07-17T10:59:30.129Z"
+    }
+  },
+  "agents": {},
+  "health": {
+    "intelligenceState": "INSUFFICIENT_DATA",
+    "observationCount": 0,
+    "confidence": 0
   }
 }
