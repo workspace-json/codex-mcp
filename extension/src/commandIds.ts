@@ -13,6 +13,7 @@ export const COMMAND_IDS = {
   focusCurrentChange: "workspacejson.focusCurrentChange",
   openIntelligenceFile: "workspacejson.openIntelligenceFile",
   openWalkthrough: "workspacejson.openWalkthrough",
+  generateIntelligence: "workspacejson.generateIntelligence",
 } as const;
 
 /** The published walkthrough id: `<publisher>.<extension>#<walkthroughId>`. */

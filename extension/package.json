@@ -11,6 +11,44 @@
   "categories": [
     "Other"
   ],
+  "keywords": [
+    "workspace.json",
+    "code-review",
+    "fragility",
+    "co-change",
+    "agent-safety"
+  ],
+  "galleryBanner": {
+    "color": "#07100e",
+    "theme": "dark"
+  },
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/license-Apache--2.0-blue",
+      "href": "https://github.com/workspace-json/codex-mcp/blob/main/LICENSE",
+      "description": "License"
+    },
+    {
+      "url": "https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml/badge.svg",
+      "href": "https://github.com/workspace-json/codex-mcp/actions/workflows/ci.yml",
+      "description": "CI Status"
+    }
+  ],
+  "bugs": {
+    "url": "https://github.com/workspace-json/codex-mcp/issues"
+  },
+  "homepage": "https://workspacejson.dev/implementations/codex",
+  "pricing": "Free",
+  "preview": true,
+  "qna": false,
+  "markdown": "github",
+  "extensionKind": [
+    "workspace"
+  ],
+  "author": {
+    "name": "workspace.json",
+    "url": "https://workspacejson.dev"
+  },
   "main": "./out/src/extension.js",
   "activationEvents": [
     "onStartupFinished"
@@ -83,7 +121,12 @@
       },
       {
         "command": "workspacejson.openWalkthrough",
-        "title": "Getting Started",
+        "title": "Open Getting Started Walkthrough",
+        "category": "workspace.json"
+      },
+      {
+        "command": "workspacejson.generateIntelligence",
+        "title": "Generate Intelligence",
         "category": "workspace.json"
       }
     ],
@@ -99,7 +142,7 @@
       {
         "view": "workspacejsonCodexChangeset",
         "when": "workspacejsonCodex.viewState == noFile",
-        "contents": "No `.agents/workspace.json` was found.\n\nThe generator derives repository structure; humans or an observer author evidence. It leaves `manual` empty on purpose: guessed churn signals have no evidence records, remain ASSERTED, and cannot block. See [`fixture/`](https://github.com/workspace-json/codex-mcp/tree/main/fixture) for a worked example.\n\n[Getting Started](command:workspacejson.openWalkthrough)"
+        "contents": "No `.agents/workspace.json` was found.\n\nGenerate one with `npx agents-audit@0.4.3 generate .` — it writes repository topology and hygiene. Today, `fileIndex` is empty and `manual` fragility/co-change evidence is human-authored (ASSERTED tier, not auto-generated).\n\n[Generate Intelligence](command:workspacejson.generateIntelligence)\n\n[Getting Started](command:workspacejson.openWalkthrough)"
       },
       {
         "view": "workspacejsonCodexChangeset",
@@ -123,6 +166,17 @@
         "title": "workspace.json: Getting Started",
         "description": "Find the current-change intelligence view, read the deterministic decision, resolve it, and use advisory review.",
         "steps": [
+          {
+            "id": "generate",
+            "title": "Generate workspace.json",
+            "description": "The MCP server and hook consume `.agents/workspace.json`. Generate one with `npx agents-audit@0.4.3 generate .` — it writes repository topology and hygiene. Today, `fileIndex` is empty and `manual` fragility/co-change evidence is human-authored (ASSERTED tier, not auto-generated).\n[Generate Intelligence](command:workspacejson.generateIntelligence)",
+            "media": {
+              "markdown": "assets/walkthrough/generate.md"
+            },
+            "completionEvents": [
+              "onContext:workspacejsonCodex.viewState != noFile"
+            ]
+          },
           {
             "id": "find",
             "title": "Open the workspace.json intelligence view",

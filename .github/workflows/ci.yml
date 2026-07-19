@@ -31,6 +31,9 @@ jobs:
       - name: Check repository structure
         run: npm run check:structure
 
+      - name: Check generator version pin
+        run: npm run check:generator-version
+
       - name: Typecheck
         run: npm run typecheck
 

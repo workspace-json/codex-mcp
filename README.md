@@ -69,6 +69,10 @@ Without the hook you still get the read tools, but not deterministic enforcement
 ### CI / repo-native check — no editor required
 
 ```bash
+# After `install --with-hook` (the installed path, works in any repo):
+git diff --name-only | node .codex/workspacejson-codex-mcp/hooks/pre-edit-check.mjs --paths-stdin
+
+# From a checkout of this repo (the source path):
 git diff --name-only | node hooks/pre-edit-check.mjs --paths-stdin
 ```
 
@@ -101,15 +105,25 @@ code --install-extension workspacejson-codex-decorations-<version>.vsix
 
 Demo and fixture repos may recommend the exact extension ID through `.vscode/extensions.json`; that's discovery only and never installs anything on its own.
 
+### Generate workspace.json
+
+The MCP server and hook consume `.agents/workspace.json`. The reference generator is [`agents-audit`](https://github.com/workspace-json/agents-audit) — a separate package in the same org:
+
+```bash
+npx agents-audit@0.4.3 generate .
+```
+
+This writes `.agents/workspace.json` with repository topology and hygiene. Today, `generated.fileIndex` is empty and `manual` fragility/co-change evidence is not auto-generated — those remain human-authored (ASSERTED tier at minimum, OBSERVED when backed by evidence records). The generator does not guess risk signals; guessed churn has no evidence records, remains ASSERTED, and cannot block. See [`fixture/`](fixture/) for a worked example with manual evidence.
+
 ### Verify in two minutes
 
-From a repo that has a committed `.agents/workspace.json`:
+`generate` (above) writes repository topology only — no fragility or co-change evidence, so a freshly generated `workspace.json` has nothing to deny yet. To see the deny path itself, use this repo's `fixture/`, whose `manual` evidence is hand-authored for exactly this demo:
 
-1. In Codex, ask it to edit a file the workspace flags as fragile.
-2. Watch the hook refuse the patch, citing the recorded evidence and the co-change partner the change left out.
-3. Ask Codex to include the partner and retry — the edit proceeds.
+1. Open `fixture/` in Codex. In Codex, ask it to edit `src/routes/checkout.ts`.
+2. Watch the hook refuse the patch, citing the recorded evidence and the co-change partners the change left out.
+3. Ask Codex to include both partners and retry — the edit proceeds.
 
-No configuration beyond step 1 above. The `fixture/` in this repo reproduces the exact denial shown in the demo.
+No configuration beyond step 1 above. On your own repo, the same deny path activates once you've authored `manual.fragileFiles` / `manual.coChangePatterns` yourself — see [`docs/workspace-contract.md`](docs/workspace-contract.md).
 
 </details>
 

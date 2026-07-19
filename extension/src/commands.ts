@@ -7,6 +7,7 @@ import type { WorkspaceIntelligenceModel } from "./workspaceIntelligence.js";
 const ARTIFACT_PATH = ".agents/workspace.json";
 const REVIEW_TERMINAL = "workspace.json review";
 const VERIFY_TERMINAL = "workspace.json verify";
+const GENERATE_TERMINAL = "workspace.json generate";
 
 function firstFolder(): vscode.WorkspaceFolder | undefined {
   return vscode.workspace.workspaceFolders?.[0];
@@ -60,7 +61,14 @@ export function registerCommands(model: WorkspaceIntelligenceModel, context: vsc
     try {
       await vscode.window.showTextDocument(uri);
     } catch {
-      void vscode.window.showWarningMessage("workspace.json: .agents/workspace.json was not found in this workspace.");
+      // Same next step the welcome states already offer (§4.2) — this command is
+      // reachable outside the tree view (Command Palette), so it shouldn't be the
+      // one dead end that doesn't point back to Getting Started.
+      const choice = await vscode.window.showWarningMessage(
+        "workspace.json: .agents/workspace.json was not found in this workspace.",
+        "Getting Started",
+      );
+      if (choice === "Getting Started") await vscode.commands.executeCommand(COMMAND_IDS.openWalkthrough);
     }
   });
 
@@ -108,6 +116,19 @@ export function registerCommands(model: WorkspaceIntelligenceModel, context: vsc
     term.show();
     void vscode.window.showInformationMessage(
       "workspace.json: advisory review command staged in the terminal (requires OPENAI_API_KEY or OPENROUTER_API_KEY). Review it, then press Enter to run.",
+    );
+  });
+
+  register(COMMAND_IDS.generateIntelligence, () => {
+    const term = terminal(GENERATE_TERMINAL);
+    // Pre-fill only — the developer runs it. Not auto-executed.
+    // The extension is a pure consumer: it types a command, the user presses
+    // enter, and the canonical agents-audit generator runs. The extension
+    // writes nothing to the working tree.
+    term.sendText("npx agents-audit@0.4.3 generate .", false);
+    term.show();
+    void vscode.window.showInformationMessage(
+      "workspace.json: generate command staged in the terminal. Review it, then press Enter to run. Today, generate writes repository topology and hygiene with an empty fileIndex; manual evidence is human-authored.",
     );
   });
 
