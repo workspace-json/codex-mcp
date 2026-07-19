@@ -503,7 +503,7 @@ async function runInstall(opts = {}) {
     console.log("  2. Select the workspace.json icon in the Activity Bar (the { • } glyph).");
     console.log('  3. Follow the "workspace.json: Getting Started" walkthrough (opens on first install).');
     console.log("");
-    console.log('  Reopen later: Command Palette → "workspace.json: Getting Started".');
+    console.log('  Reopen later: Command Palette → "workspace.json: Open Getting Started Walkthrough".');
   }
 }
 
