@@ -48,8 +48,9 @@
     "test:watch": "vitest --exclude '.claude/**'",
     "smoke": "node scripts/smoke.mjs",
     "check:structure": "node scripts/check-repo-structure.mjs",
+    "check:generator-version": "node scripts/check-generator-version.mjs",
     "pack:check": "npm pack --dry-run && npx publint",
-    "check": "npm run check:structure && npm run typecheck && npm run lint && npm run build && npm run test && npm run smoke",
+    "check": "npm run check:structure && npm run check:generator-version && npm run typecheck && npm run lint && npm run build && npm run test && npm run smoke",
     "verify": "npm run check",
     "prepublishOnly": "npm run check && npm run build:extension && npm run pack:check"
   },

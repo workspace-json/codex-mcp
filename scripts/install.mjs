@@ -448,6 +448,15 @@ async function runInstall(opts = {}) {
   await mkdir(codexDir, { recursive: true });
   await writeAtomic(configPath, content);
   console.log(`Wrote ${configPath}`);
+  if (withHook) {
+    // HAC-203: print, never write. .codex/config.toml is commonly a tracked,
+    // team-shared file (this repo does exactly that) — only the vendored
+    // runtime this installer owns is worth ignoring, and only the user's own
+    // .gitignore should say so.
+    console.log("");
+    console.log("Add this to .gitignore:");
+    console.log("  .codex/workspacejson-codex-mcp/");
+  }
   console.log("");
   console.log("Next steps:");
   console.log("  1. Restart Codex.");
@@ -472,10 +481,20 @@ async function runInstall(opts = {}) {
 
   // Compact install receipt: what integrated, and where to go next.
   const pad = (label) => label.padEnd(28);
+  const artifactPath = resolve(repoRoot, ".agents", "workspace.json");
+  const artifactExists = existsSync(artifactPath);
   console.log("");
-  console.log("workspace.json installed");
+  console.log("workspace.json MCP/hook installed");
   console.log(`  ${pad("Repository integration")}PASS`);
   console.log(`  ${pad("Deterministic hook")}${withHook ? "PASS" : "not requested (--with-hook)"}`);
+  console.log(`  ${pad("Intelligence artifact")}${artifactExists ? "PASS" : "NOT FOUND"}`);
+  if (!artifactExists) {
+    console.log("");
+    console.log("  .agents/workspace.json does not exist yet. Generate it:");
+    console.log("    npx agents-audit@0.4.3 generate .");
+    console.log("  Today, generate writes repository topology and hygiene with an empty");
+    console.log("  fileIndex; manual fragility and co-change evidence is human-authored.");
+  }
   if (withExtension) console.log(`  ${pad("VS Code extension")}${extension.status}`);
   if (withExtension && extension.status === "PASS") {
     console.log("");

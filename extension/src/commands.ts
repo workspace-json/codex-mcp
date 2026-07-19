@@ -7,6 +7,7 @@ import type { WorkspaceIntelligenceModel } from "./workspaceIntelligence.js";
 const ARTIFACT_PATH = ".agents/workspace.json";
 const REVIEW_TERMINAL = "workspace.json review";
 const VERIFY_TERMINAL = "workspace.json verify";
+const GENERATE_TERMINAL = "workspace.json generate";
 
 function firstFolder(): vscode.WorkspaceFolder | undefined {
   return vscode.workspace.workspaceFolders?.[0];
@@ -115,6 +116,19 @@ export function registerCommands(model: WorkspaceIntelligenceModel, context: vsc
     term.show();
     void vscode.window.showInformationMessage(
       "workspace.json: advisory review command staged in the terminal (requires OPENAI_API_KEY or OPENROUTER_API_KEY). Review it, then press Enter to run.",
+    );
+  });
+
+  register(COMMAND_IDS.generateIntelligence, () => {
+    const term = terminal(GENERATE_TERMINAL);
+    // Pre-fill only — the developer runs it. Not auto-executed.
+    // The extension is a pure consumer: it types a command, the user presses
+    // enter, and the canonical agents-audit generator runs. The extension
+    // writes nothing to the working tree.
+    term.sendText("npx agents-audit@0.4.3 generate .", false);
+    term.show();
+    void vscode.window.showInformationMessage(
+      "workspace.json: generate command staged in the terminal. Review it, then press Enter to run. Today, generate writes repository topology and hygiene with an empty fileIndex; manual evidence is human-authored.",
     );
   });
 
