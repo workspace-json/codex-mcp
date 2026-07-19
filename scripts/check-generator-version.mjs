@@ -50,10 +50,17 @@ export function collectVersionRefs(rootDir, files) {
  * the same generator version as every other surface. It does NOT judge that
  * version against the registry (see file header / HAC-204).
  * @param {{ file: string, version: string }[]} refs
+ * @param {string[]} requiredSurfaces
  * @returns {string[]} violation messages; empty when clean
  */
-export function findVersionMismatches(refs) {
-  if (refs.length === 0) return [];
+export function findVersionMismatches(refs, requiredSurfaces = SURFACES) {
+  const representedSurfaces = new Set(refs.map((ref) => ref.file));
+  const missingSurfaces = requiredSurfaces.filter((file) => !representedSurfaces.has(file));
+  if (missingSurfaces.length > 0)
+    return [
+      `${GENERATOR_PACKAGE} pin is missing from required surface(s): ${missingSurfaces.join(", ")}. ` +
+        `Each declared surface must contain a version-pinned ${GENERATOR_PACKAGE}@x.y.z command.`,
+    ];
 
   const distinctVersions = [...new Set(refs.map((r) => r.version))];
   if (distinctVersions.length <= 1) return [];
