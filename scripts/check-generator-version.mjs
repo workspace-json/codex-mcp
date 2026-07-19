@@ -1,11 +1,16 @@
 #!/usr/bin/env node
-// The reference generator (`agents-audit`) is invoked by version-pinned command
-// string, copy-pasted across README, the extension manifest, its source, its
-// walkthrough media, and the installer receipt — a Second Copy by construction
-// (see META-140). This
-// gate does not hand-sync those strings; it asserts they stay in sync with
-// each other and with what the registry actually publishes, so drift fails
-// loudly instead of shipping a stale pin.
+// The reference generator (`agents-audit`) is invoked by a version-pinned
+// command string, copy-pasted across README, the extension manifest, its
+// source, its walkthrough media, and the installer receipt — a Second Copy by
+// construction (see HAC-204). This gate does not hand-sync those strings; it
+// asserts they stay in sync with EACH OTHER, so a stale pin in one surface
+// fails loudly instead of shipping.
+//
+// It deliberately does NOT judge the pin against the npm registry's latest:
+// the pin is the contract, the registry is the world, and a downstream repo's
+// CI must not turn red merely because an upstream release moved ahead of a
+// deliberate pin. Reconciling the pin against the *installed* agents-audit
+// version is the redesign tracked in HAC-204.
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,57 +46,25 @@ export function collectVersionRefs(rootDir, files) {
 }
 
 /**
- * Pure comparison logic — no filesystem or network — so it's unit-testable
- * without hitting the registry.
+ * Pure comparison logic — no filesystem or network. Asserts every surface pins
+ * the same generator version as every other surface. It does NOT judge that
+ * version against the registry (see file header / HAC-204).
  * @param {{ file: string, version: string }[]} refs
- * @param {string | null} registryVersion null when the registry couldn't be reached
  * @returns {string[]} violation messages; empty when clean
  */
-export function findVersionMismatches(refs, registryVersion) {
+export function findVersionMismatches(refs) {
   if (refs.length === 0) return [];
 
-  const violations = [];
   const distinctVersions = [...new Set(refs.map((r) => r.version))];
+  if (distinctVersions.length <= 1) return [];
 
-  if (distinctVersions.length > 1) {
-    const detail = refs.map((r) => `${r.file} -> ${r.version}`).join(", ");
-    violations.push(
-      `${GENERATOR_PACKAGE} version disagrees across surfaces (${detail}). Pin one version in every reference.`,
-    );
-    return violations; // cross-surface disagreement already fails; skip the registry check
-  }
-
-  const pinned = distinctVersions[0];
-  if (registryVersion && pinned !== registryVersion) {
-    const surfaceList = refs.map((r) => r.file).join(", ");
-    violations.push(
-      `${GENERATOR_PACKAGE}@${pinned} is pinned in every surface (${surfaceList}), but the npm registry's current version is ${registryVersion}. Update every reference to ${registryVersion}.`,
-    );
-  }
-
-  return violations;
+  const detail = refs.map((r) => `${r.file} -> ${r.version}`).join(", ");
+  return [`${GENERATOR_PACKAGE} version disagrees across surfaces (${detail}). Pin one version in every reference.`];
 }
 
-async function fetchRegistryVersion(pkg) {
-  const res = await fetch(`https://registry.npmjs.org/${pkg}/latest`, { signal: AbortSignal.timeout(5000) });
-  if (!res.ok) throw new Error(`registry responded ${res.status}`);
-  const data = await res.json();
-  return data.version;
-}
-
-async function main() {
+function main() {
   const refs = collectVersionRefs(root, SURFACES);
-
-  let registryVersion = null;
-  try {
-    registryVersion = await fetchRegistryVersion(GENERATOR_PACKAGE);
-  } catch (error) {
-    console.warn(
-      `check:generator-version: could not reach the npm registry for ${GENERATOR_PACKAGE} (${error.message}); skipping the live-version check, still checking cross-surface agreement.`,
-    );
-  }
-
-  const violations = findVersionMismatches(refs, registryVersion);
+  const violations = findVersionMismatches(refs);
   if (violations.length > 0) {
     console.error(`${GENERATOR_PACKAGE} version check failed:`);
     for (const violation of violations) console.error(`  - ${violation}`);
