@@ -134,6 +134,34 @@ function normalizeFileIndex(raw: unknown): string[] {
   return Object.keys(asRecord(raw)).map(normalizeKey);
 }
 
+function normalizeFrameworkManifest(raw: unknown): FrameworkManifest | undefined {
+  if (Array.isArray(raw)) {
+    const manifest: FrameworkManifest = {};
+    for (const entry of raw) {
+      const framework = asRecord(entry);
+      const name =
+        (typeof framework.name === "string" && framework.name) ||
+        (typeof framework.framework === "string" && framework.framework) ||
+        undefined;
+      if (name) {
+        const version = framework.version;
+        manifest[name] =
+          typeof version === "string" || typeof version === "number" || typeof version === "boolean" ? version : true;
+        continue;
+      }
+      for (const [key, value] of Object.entries(framework)) {
+        if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+          manifest[key] = value;
+        }
+      }
+    }
+    return Object.keys(manifest).length > 0 ? manifest : undefined;
+  }
+
+  const manifest = asRecord(raw);
+  return Object.keys(manifest).length > 0 ? manifest : undefined;
+}
+
 export function normalizeWorkspace(sourcePath: string, parsed: unknown): NormalizedWorkspace {
   const root = optionalRecord(parsed, "root");
   const manual = optionalRecord(root.manual, "manual");
@@ -147,11 +175,7 @@ export function normalizeWorkspace(sourcePath: string, parsed: unknown): Normali
     (typeof root.schemaVersion === "string" && root.schemaVersion) ||
     undefined;
 
-  const frameworkRaw = generated.frameworkManifest;
-  const frameworkManifest =
-    frameworkRaw && typeof frameworkRaw === "object" && !Array.isArray(frameworkRaw)
-      ? (frameworkRaw as FrameworkManifest)
-      : undefined;
+  const frameworkManifest = normalizeFrameworkManifest(generated.frameworkManifest);
 
   // STABLE SURFACE ONLY (per live-state audit): the four externally consumed
   // paths. health.*, sidecar files, generated.fragility, and generated.coChange

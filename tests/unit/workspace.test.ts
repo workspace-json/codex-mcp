@@ -129,14 +129,14 @@ describe("normalizeWorkspace", () => {
     expect(ws.fileIndex).toEqual(["src/one.ts", "src/two.ts"]);
   });
 
-  it("degrades an array-shaped frameworkManifest (the real spec's schema, a list of detected frameworks) to undefined instead of misreading it as the legacy {runtime,testRunner} record", () => {
+  it("normalizes an array-shaped frameworkManifest emitted by the current producer", () => {
     const raw = {
       generated: {
         frameworkManifest: [{ name: "node", version: "22.0.0", confidence: 0.9 }],
       },
     };
     const ws = normalizeWorkspace("/tmp/workspace.json", raw);
-    expect(ws.frameworkManifest).toBeUndefined();
+    expect(ws.frameworkManifest).toEqual({ node: "22.0.0" });
   });
 
   it("tolerates an adjacency map for co-change patterns", () => {
