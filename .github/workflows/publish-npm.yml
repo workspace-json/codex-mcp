@@ -52,6 +52,17 @@ jobs:
           test -f "$TAR"
           tar -tzf "$TAR" | grep -F 'package/.codex-plugin/assets/marketplace-icon.svg'
           tar -tzf "$TAR" | grep -F 'package/hooks/pre-edit-check.mjs'
+          # Assert the array-manifest normalizer is in the SHIPPED bytes, not
+          # merely in the branch. 0.1.5 and 0.1.6 both published without it
+          # while every branch check was green (HAC-206). Note this is a
+          # presence check on a symbol: it catches the fix going missing, not
+          # the fix being wrong. A behavioural gate needs a non-empty
+          # frameworkManifest fixture -- an empty array normalizes to
+          # undefined with or without the fix, so it discriminates nothing.
+          mkdir -p /tmp/workspacejson-release/inspect
+          tar -xzf "$TAR" -C /tmp/workspacejson-release/inspect
+          grep -q 'normalizeFrameworkManifest' \
+            /tmp/workspacejson-release/inspect/package/dist/services/workspace.js
       - name: Install packed artifact in a clean project
         run: |
           mkdir -p /tmp/workspacejson-release/install
