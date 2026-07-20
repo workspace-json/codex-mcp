@@ -18,6 +18,10 @@ hac120-desktop.png
 # Local Claude state is machine-specific, not product source.
 .claude/
 
+# Local editor state. The extension-host launch config is a developer
+# convenience, not a release input; keep it out of the published repo.
+.vscode/
+
 # Local Codex transcript-processing scratchwork may contain prompts and tool traces.
 /scripts/extract-session*.mjs
 

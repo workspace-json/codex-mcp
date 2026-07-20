@@ -24,6 +24,7 @@
     "ignore": [
       ".claude",
       ".local",
+      ".vscode",
       "dist",
       "node_modules",
       "fixture",
