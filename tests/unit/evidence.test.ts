@@ -125,7 +125,28 @@ describe("decideEnforcement", () => {
     expect(result.message).toContain("BLOCK");
     expect(result.message).toContain("src/auth/session.ts");
     expect(result.message).toContain("revert d4e5f6");
+    expect(result.message).toContain(
+      "Include the recorded co-change partners, or stop and review the exception with a human.",
+    );
+    expect(result.message).not.toContain("get explicit human approval");
     expect(result.message).not.toContain("safe");
+  });
+
+  it("uses path membership and has no override for an evidenced missing partner", () => {
+    const input = {
+      path: "src/routes/checkout.ts",
+      fragile: true,
+      tier: "OBSERVED" as const,
+      evidence: [{ claim: "revert d4e5f6" }],
+      coChangePartners: ["src/auth/session.ts"],
+      changesetPaths: ["src/routes/checkout.ts", "src/auth/session-helper.ts"],
+      override: true,
+    };
+
+    const result = decideEnforcement(input);
+
+    expect(result.action).toBe("deny");
+    expect(result.missingPartners).toEqual(["src/auth/session.ts"]);
   });
 
   it("warns when evidenced fragility is touched but partners are covered", () => {

@@ -163,7 +163,7 @@ export function decideEnforcement(input: {
 
   if (evidencedFragile && missingPartners.length > 0) {
     action = "deny";
-    message = `BLOCK [tier ${input.tier}]: ${input.path} is fragile${input.reason ? ` (${input.reason})` : ""} and historically co-changes with ${missingPartners.join(", ")}, which this change omits.${cite} Include the co-change partners or get explicit human approval to proceed without them.`;
+    message = `BLOCK [tier ${input.tier}]: ${input.path} is fragile${input.reason ? ` (${input.reason})` : ""} and historically co-changes with ${missingPartners.join(", ")}, which this change omits.${cite} Include the recorded co-change partners, or stop and review the exception with a human.`;
   } else if (evidencedFragile) {
     action = "warn";
     message = `CAUTION [tier ${input.tier}]: ${input.path} is fragile${input.reason ? ` (${input.reason})` : ""}.${cite} Prefer minimal, well-tested changes.${

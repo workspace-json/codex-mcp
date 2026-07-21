@@ -5,7 +5,7 @@ import { isVerifyEnabled } from "./config.js";
 import { SERVER_INSTRUCTIONS } from "./constants.js";
 import { registerWorkspaceTools } from "./tools/workspace.js";
 
-const VERSION = "0.1.7";
+const VERSION = "0.1.8";
 
 function buildServer(): McpServer {
   const server = new McpServer(

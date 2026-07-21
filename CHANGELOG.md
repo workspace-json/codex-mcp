@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-07-21
+
+### Fixed
+
+- Bounded the evidenced-partner deny guidance: include the recorded partners, or stop and review the exception with a human; no approval bypass is implied.
+- Distinguished the local two-partner fixture walkthrough from Billfold's separate one-partner provider-demo proof path.
+- Corrected public wording for the hero, generator producer, network boundary, path coverage limits, and Billfold reproduction links.
+
 ## [0.1.5] - 2026-07-17
 
 ### Fixed
