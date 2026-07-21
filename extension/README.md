@@ -22,7 +22,14 @@ The whole point of the surface is a distinction you can see in one hover:
 
 The rules said no. An independent model looked and found no additional blocker. **The block holds anyway.** Judgment and enforcement are separate planes: an advisory review can add signal, but it never lifts a deterministic decision, and `PASS` is scope-bounded — never a safety certification.
 
-Everything is read from your local `.agents/workspace.json`. **No network calls. No telemetry.**
+Explorer decorations, the current-change view, the status item, and saved
+review receipts are read locally from `.agents/workspace.json`, with no
+telemetry.
+
+Running **Run Advisory Review** is a separate explicit action. It sends only
+the supplied diff to the configured OpenAI or OpenRouter provider and stores
+the resulting attributed receipt locally. Deterministic enforcement does not
+require an API key and does not transmit repository contents.
 
 ## Install
 
