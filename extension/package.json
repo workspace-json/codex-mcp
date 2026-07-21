@@ -1,8 +1,8 @@
 {
   "name": "workspacejson-codex-decorations",
   "displayName": "workspace.json — Codex change intelligence",
-  "description": "Surfaces recorded fragility, co-change partners, and receipt-backed advisory review for the file you are changing — Explorer decorations, a current-change view, and a status item, all read from your local .agents/workspace.json. No telemetry, no network.",
-  "version": "0.1.2",
+  "description": "Surfaces local workspace.json fragility, co-change partners, and saved advisory-review receipts in VS Code. No telemetry. Running a new advisory review is an explicit action that sends only the supplied diff to the configured provider.",
+  "version": "0.1.5",
   "publisher": "workspace-json",
   "license": "Apache-2.0",
   "engines": {
@@ -217,7 +217,7 @@
           {
             "id": "review",
             "title": "Run an independent advisory review",
-            "description": "GPT-5.6 reviews a bounded evidence bundle in a separate read-only session. Its result is advisory — it can surface additional risks or gaps, but it never overrides deterministic enforcement.\n[Run Advisory Review](command:workspacejson.runReview)",
+            "description": "GPT-5.6 reviews the supplied diff in a separate read-only session. Running this command explicitly sends only that diff to the configured OpenAI or OpenRouter provider and stores an attributed receipt locally. The result is advisory: it can surface additional risks or gaps, but it never overrides deterministic enforcement.\n[Run Advisory Review](command:workspacejson.runReview)",
             "media": {
               "image": "assets/walkthrough/review.svg",
               "altText": "Deterministic decision DENY beside advisory result PASS within reviewed scope."

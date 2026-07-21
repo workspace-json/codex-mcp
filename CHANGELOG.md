@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-07-21
+
+### Fixed
+
+- Narrowed README evidence and outcome wording to the recorded co-change mechanism, without implying a documented production incident or a guaranteed Codex revision.
+- Clarified local extension rendering and saved receipts versus explicit provider-backed advisory review across the root README, extension metadata, extension README, and Getting Started walkthrough.
+
 ## [0.1.8] - 2026-07-21
 
 ### Fixed

@@ -25,9 +25,9 @@
 | | |
 | --- | --- |
 | Task | Update the checkout route |
-| Recorded evidence | The route and its webhook partner share a co-change history — an incident and a revert, not an import |
+| Recorded evidence | The route and its webhook partner share a repeated co-change history, including a rounding change and its later revert—not an import. |
 | An incomplete patch | The hook denies it, citing the specific evidence and the omitted partner |
-| Outcome | Codex revises the changeset before the edit lands |
+| Outcome | The incomplete patch does not land; Codex receives the evidence and must account for the recorded partner before retrying. |
 
 ## Installation
 
@@ -85,7 +85,7 @@ Let the installer handle the `code` CLI, idempotency, and the reload prompt for 
 npx @workspacejson/codex-mcp install --with-extension
 ```
 
-This installs the `workspace-json.workspacejson-codex-decorations` extension: Explorer decorations on fragile files, a **current-change** view, a synchronized status item, and receipt-backed advisory review — all read from your local `.agents/workspace.json`, with no network calls and no telemetry.
+This installs the `workspace-json.workspacejson-codex-decorations` extension: Explorer decorations on fragile files, a **current-change** view, a synchronized status item, and saved review receipts. The decorations, current-change view, status item, and saved review receipts read local workspace data with no telemetry. Running a new advisory review is a separate explicit action that sends only the supplied diff to the configured provider.
 
 The installer targets **VS Code Stable** only. If the `code` CLI isn't on your PATH it reports `UNAVAILABLE` with a one-line fix and leaves your MCP/hook install untouched — it never silently targets Insiders, Cursor, a remote, or a container. To aim it at a different editor's CLI deliberately, set `WORKSPACEJSON_CODE_CLI` (e.g. `cursor`) and rerun.
 
