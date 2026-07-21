@@ -409,7 +409,7 @@ Returns JSON:
       description: `Evaluate a SET of file paths (a proposed change) against workspace.json fragility and co-change history, and return a mechanical enforcement decision.
 
 Decision semantics (derived, never model-emitted):
-  - "deny": an evidenced-fragile file is touched while its recorded co-change partners are absent from the changeset. Include the partners or get explicit human approval.
+  - "deny": an evidenced-fragile file is touched while its recorded co-change partners are absent from the changeset. Include the recorded co-change partners, or stop and review the exception with a human.
   - "warn": evidenced-fragile file touched (partners covered), or co-change partners missing on a non-evidenced file.
   - "annotate": fragility asserted without evidence. Context only.
   - "none": no recorded history. This is NOT a safety approval; this tool never certifies a change as safe.

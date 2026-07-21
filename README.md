@@ -10,7 +10,7 @@
 
 <br />
 
-<p align="center"><strong>Portable repository history that changes Codex's plan before an evidenced risky edit lands.</strong></p>
+<p align="center"><strong>Repository evidence that helps Codex plan around recorded risky changes.</strong></p>
 
 <p align="center"><code>@workspacejson/codex-mcp</code></p>
 
@@ -25,9 +25,8 @@
 | | |
 | --- | --- |
 | Task | Update the checkout route |
-| Without `workspace.json` | Codex proposes one file |
-| With `workspace.json` | The hook identifies two evidenced partners |
-| Enforcement | The incomplete patch is denied |
+| Recorded evidence | The route and its webhook partner share a co-change history — an incident and a revert, not an import |
+| An incomplete patch | The hook denies it, citing the specific evidence and the omitted partner |
 | Outcome | Codex revises the changeset before the edit lands |
 
 ## Installation
@@ -115,7 +114,7 @@ npx agents-audit@0.4.3 generate .
 
 This writes `.agents/workspace.json` with repository topology and hygiene. Today, `generated.fileIndex` is empty and `manual` fragility/co-change evidence is not auto-generated — those remain human-authored (ASSERTED tier at minimum, OBSERVED when backed by evidence records). The generator does not guess risk signals; guessed churn has no evidence records, remains ASSERTED, and cannot block. See [`fixture/`](fixture/) for a worked example with manual evidence.
 
-### Verify in two minutes
+### Local proof path — two recorded partners
 
 `generate` (above) writes repository topology only — no fragility or co-change evidence, so a freshly generated `workspace.json` has nothing to deny yet. To see the deny path itself, use this repo's `fixture/`, whose `manual` evidence is hand-authored for exactly this demo:
 
@@ -125,11 +124,35 @@ This writes `.agents/workspace.json` with repository topology and hygiene. Today
 
 No configuration beyond step 1 above. On your own repo, the same deny path activates once you've authored `manual.fragileFiles` / `manual.coChangePatterns` yourself — see [`docs/workspace-contract.md`](docs/workspace-contract.md).
 
+### Provider-demo proof path — Billfold's one recorded partner
+
+The judge-facing demo runs against [`workspace-json/billfold`](https://github.com/workspace-json/billfold), a small public payments service. This is a separate proof path from this repository's local `fixture/`: Billfold uses the single recorded pairing shown on camera, `src/routes/checkout.ts` and `src/webhooks/stripe.ts`; the local walkthrough above uses `src/auth/session.ts` and `src/lib/format.ts`.
+
+```bash
+git clone https://github.com/workspace-json/billfold.git
+cd billfold
+git checkout 5e97f1dc9e6a41eb80d2d6eb80d5ef703cbe1cde  # main as of 2026-07-20; no tag covers this pairing yet
+npm install
+npx @workspacejson/codex-mcp install --with-hook
+```
+
+1. Open `billfold` in Codex. Ask it to change the idempotency-key format in `src/routes/checkout.ts`.
+2. The hook denies the patch, citing the recorded revert/incident and the omitted partner, `src/webhooks/stripe.ts`.
+3. Ask Codex to include `src/webhooks/stripe.ts` and retry — the patch proceeds. That clears the recorded-partner check; it is not a correctness verdict on the change (see [Current limitations](#current-limitations)).
+
+This pins to the commit above because `billfold`'s `main` is mutable and the two existing tags (`fixture-v1`, `fixture-v2`) predate this pairing — clone and stay on `main` instead if you want the current state.
+
 </details>
 
 ## How it works
 
 MCP supplies context. A deterministic hook enforces evidenced omissions. An optional, direct read-only GPT-5.6 API review challenges a supplied completed diff and preserves its request/response receipt locally. The reviewer never controls the hook, and a `PASS` verdict is not a safety certification.
+
+```bash
+git diff | npx @workspacejson/codex-mcp review --diff-stdin
+```
+
+Requires `OPENAI_API_KEY` (or `OPENROUTER_API_KEY`) in the environment. Without one, it reports `UNAVAILABLE` and deterministic enforcement is unaffected.
 
 Full derivation rules for evidence tiers (`ASSERTED`/`OBSERVED`/`VERIFIED`), the hook's fail-open behavior, and the GPT-5.6 reviewer's scope live in [`docs/how-it-works.md`](docs/how-it-works.md).
 
@@ -147,7 +170,9 @@ Each is checkable, not asserted: run `npm run verify` from a clean clone to repr
 
 ## Trust boundary
 
-The MCP and deterministic hook run locally over stdio and do not upload repository contents. Initial package installation may contact npm. The optional `review` command sends only the diff you explicitly supply to a configured API provider: OpenAI (`OPENAI_API_KEY`) or OpenRouter (`OPENROUTER_API_KEY`). When both keys exist, set `WORKSPACEJSON_REVIEWER_PROVIDER` to `openai` or `openrouter`; an explicit `WORKSPACEJSON_REVIEWER_BASE_URL` also selects OpenRouter. It uses `store: false` with OpenAI and preserves a local request/response receipt that identifies the provider and model. Do not supply diffs containing secrets.
+**Local, no network:** the MCP server, the deterministic hook, and the VS Code extension run over stdio and the local filesystem only. None of them upload repository contents or make network calls.
+
+**Network, by explicit action only:** `npx` package installation contacts npm. The optional `review` command sends only the diff you explicitly supply to a configured API provider: OpenAI (`OPENAI_API_KEY`) or OpenRouter (`OPENROUTER_API_KEY`). When both keys exist, set `WORKSPACEJSON_REVIEWER_PROVIDER` to `openai` or `openrouter`; an explicit `WORKSPACEJSON_REVIEWER_BASE_URL` also selects OpenRouter. It uses `store: false` with OpenAI and preserves a local request/response receipt that identifies the provider and model. Do not supply diffs containing secrets.
 
 ## Current limitations
 
@@ -156,6 +181,7 @@ The MCP and deterministic hook run locally over stdio and do not upload reposito
 - Missing or malformed `workspace.json` fails open with an explicit unavailable warning.
 - Stale evidence is not treated as proof of current risk.
 - `fragile:false` means the file has no recorded fragility, not that it is verified safe.
+- Including a recorded partner's path clears the omission check; it confirms path coverage, not that the partner's content is correct or sufficient.
 - This does not replace tests, review, or repository instructions.
 
 ## Learn more
@@ -168,7 +194,7 @@ The MCP and deterministic hook run locally over stdio and do not upload reposito
 - [Verification](docs/verification.md) — what's been verified and how
 - [Build Week disclosure](docs/submission/build-week.md) — what was authored in-window
 - [Development](docs/development.md) — build, test, and smoke-suite commands
-- [Clean-install audit](docs/clean-install-audit.md) · [Fixture verification](docs/fixture-verification.md)
+- [Clean-install audit](docs/clean-install-audit.md) · [Fixture verification](docs/fixture-verification.md) · [`billfold`](https://github.com/workspace-json/billfold) — the public repo behind the demo video
 
 ## License
 

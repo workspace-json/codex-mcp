@@ -41,6 +41,14 @@ check(
     ]),
   names.join(","),
 );
+const assessTool = tools.find((tool) => tool.name === "workspace_assess_change");
+check(
+  "assessment tool describes the bounded human-review path",
+  assessTool?.description?.includes(
+    "Include the recorded co-change partners, or stop and review the exception with a human.",
+  ),
+  assessTool?.description,
+);
 
 // ── Tier derivation through file context ──
 const r1 = await client.callTool({ name: "workspace_get_file_context", arguments: { path: "src/routes/checkout.ts" } });
@@ -101,6 +109,13 @@ check(
 check(
   "deny message names missing partners",
   /src\/auth\/session\.ts/.test(d1.structuredContent?.assessments?.[0]?.message ?? ""),
+);
+check(
+  "deny message uses bounded human-review wording, not an approval bypass",
+  /Include the recorded co-change partners, or stop and review the exception with a human\./.test(
+    d1.structuredContent?.assessments?.[0]?.message ?? "",
+  ) && !/get explicit human approval/i.test(d1.structuredContent?.assessments?.[0]?.message ?? ""),
+  d1.structuredContent?.assessments?.[0]?.message,
 );
 
 const d2 = await client.callTool({
