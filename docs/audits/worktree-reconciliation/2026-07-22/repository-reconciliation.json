@@ -2,29 +2,245 @@
   "schemaVersion": "1.0",
   "auditDate": "2026-07-22",
   "mode": "read-only-evidentiary",
-  "repository": {"name": "@workspacejson/codex-mcp", "root": "/Users/user1/Documents/workspacejson-codex-mcp", "remote": "https://github.com/workspace-json/codex-mcp", "canonicalBranch": {"value": "main", "classification": "OBSERVED", "evidence": ["origin/HEAD -> origin/main", ".github/workflows/ci.yml targets main"]}},
-  "baseline": {"currentBranch": "release/0.1.9", "currentHead": "940760d2878832ab3b347714e3ff79c5dcfaec58", "workingTree": "clean", "stashes": [], "githubState": "UNKNOWN: DNS resolution failure", "workspaceFileContext": "UNKNOWN: tool unavailable", "validations": ["npm ci", "npm run check", "npm run prepublishOnly"]},
+  "repository": {
+    "name": "@workspacejson/codex-mcp",
+    "root": "/Users/user1/Documents/workspacejson-codex-mcp",
+    "remote": "https://github.com/workspace-json/codex-mcp",
+    "canonicalBranch": {
+      "value": "main",
+      "classification": "OBSERVED",
+      "evidence": ["origin/HEAD -> origin/main", ".github/workflows/ci.yml targets main"]
+    }
+  },
+  "baseline": {
+    "currentBranch": "release/0.1.9",
+    "currentHead": "940760d2878832ab3b347714e3ff79c5dcfaec58",
+    "workingTree": "clean",
+    "stashes": [],
+    "githubState": "UNKNOWN: DNS resolution failure",
+    "workspaceFileContext": "UNKNOWN: tool unavailable",
+    "validations": ["npm ci", "npm run check", "npm run prepublishOnly"]
+  },
   "worktrees": [
-    {"id":"wt-root","path":"/Users/user1/Documents/workspacejson-codex-mcp","branch":"release/0.1.9","head":"940760d","state":"clean","disposition":"PRESERVE_PENDING_DECISION"},
-    {"id":"wt-scratch","path":"/private/tmp/claude-502/-Users-user1-Documents-workspacejson-codex-mcp/eacb7df6-95a1-46ff-893c-029886576dde/scratchpad/mainwt","branch":null,"head":"e0827a8","state":"detached; status UNKNOWN","disposition":"PRESERVE_PENDING_DECISION"},
-    {"id":"wt-hac170","path":"/Users/user1/Documents/workspacejson-codex-mcp/.claude/worktrees/readme-hero-polish","branch":"feature/hac-170-extension-installer-and-docs","head":"82d25a7","state":"accessibility observed; clean status UNKNOWN","disposition":"ALREADY_INTEGRATED"},
-    {"id":"wt-prunable","count":12,"pathsPrefix":"/private/tmp/workspacejson-","state":"prunable/missing; includes 10 branch-attached and 2 detached","disposition":"PRESERVE_PENDING_DECISION"}
+    {
+      "id": "wt-root",
+      "path": "/Users/user1/Documents/workspacejson-codex-mcp",
+      "branch": "release/0.1.9",
+      "head": "940760d",
+      "state": "clean",
+      "disposition": "PRESERVE_PENDING_DECISION"
+    },
+    {
+      "id": "wt-scratch",
+      "path": "/private/tmp/claude-502/-Users-user1-Documents-workspacejson-codex-mcp/eacb7df6-95a1-46ff-893c-029886576dde/scratchpad/mainwt",
+      "branch": null,
+      "head": "e0827a8",
+      "state": "detached; status UNKNOWN",
+      "disposition": "PRESERVE_PENDING_DECISION"
+    },
+    {
+      "id": "wt-hac170",
+      "path": "/Users/user1/Documents/workspacejson-codex-mcp/.claude/worktrees/readme-hero-polish",
+      "branch": "feature/hac-170-extension-installer-and-docs",
+      "head": "82d25a7",
+      "state": "accessibility observed; clean status UNKNOWN",
+      "disposition": "ALREADY_INTEGRATED"
+    },
+    {
+      "id": "wt-prunable",
+      "count": 12,
+      "pathsPrefix": "/private/tmp/workspacejson-",
+      "state": "prunable/missing; includes 10 branch-attached and 2 detached",
+      "disposition": "PRESERVE_PENDING_DECISION"
+    }
   ],
-  "allRegisteredWorktreePaths": ["/Users/user1/Documents/workspacejson-codex-mcp","/private/tmp/claude-502/-Users-user1-Documents-workspacejson-codex-mcp/eacb7df6-95a1-46ff-893c-029886576dde/scratchpad/mainwt","/private/tmp/workspacejson-hac-136","/private/tmp/workspacejson-hac102-direct-api","/private/tmp/workspacejson-hac105","/private/tmp/workspacejson-hac129-npx-hotfix","/private/tmp/workspacejson-hac136-clean","/private/tmp/workspacejson-hac136-current","/private/tmp/workspacejson-hac136-vscode","/private/tmp/workspacejson-hac158-clean","/private/tmp/workspacejson-hac175","/private/tmp/workspacejson-hac178","/private/tmp/workspacejson-prepublish-clean-8539c64","/private/tmp/workspacejson-source-repair-8539c64","/Users/user1/Documents/workspacejson-codex-mcp/.claude/worktrees/readme-hero-polish"],
+  "allRegisteredWorktreePaths": [
+    "/Users/user1/Documents/workspacejson-codex-mcp",
+    "/private/tmp/claude-502/-Users-user1-Documents-workspacejson-codex-mcp/eacb7df6-95a1-46ff-893c-029886576dde/scratchpad/mainwt",
+    "/private/tmp/workspacejson-hac-136",
+    "/private/tmp/workspacejson-hac102-direct-api",
+    "/private/tmp/workspacejson-hac105",
+    "/private/tmp/workspacejson-hac129-npx-hotfix",
+    "/private/tmp/workspacejson-hac136-clean",
+    "/private/tmp/workspacejson-hac136-current",
+    "/private/tmp/workspacejson-hac136-vscode",
+    "/private/tmp/workspacejson-hac158-clean",
+    "/private/tmp/workspacejson-hac175",
+    "/private/tmp/workspacejson-hac178",
+    "/private/tmp/workspacejson-prepublish-clean-8539c64",
+    "/private/tmp/workspacejson-source-repair-8539c64",
+    "/Users/user1/Documents/workspacejson-codex-mcp/.claude/worktrees/readme-hero-polish"
+  ],
   "branches": [
-    {"id":"br-release-019","name":"release/0.1.9","head":"940760d","ahead":1,"behind":1,"uniquePatch":"yes (negative cherry)","disposition":"PRESERVE_PENDING_DECISION"},
-    {"id":"br-marketplace","name":"polish/extension-marketplace-metadata","head":"b9ec0d9","ahead":5,"behind":10,"uniqueCommits":10,"linear":["HAC-175","HAC-197","HAC-200","HAC-203","HAC-204","HAC-206"],"disposition":"REBASE_OR_REFRESH_CANDIDATE"},
-    {"id":"br-adversarial-fix","name":"fix/adversarial-review-hac99-hac101","head":"8dea6cc","ahead":63,"behind":4,"uniqueCommits":4,"linear":["HAC-99","HAC-101","HAC-129","HAC-130","HAC-131"],"disposition":"MANUAL_RECONCILIATION_REQUIRED"},
-    {"id":"br-hac136-family","names":["feature/hac-136-eligibility-reviewer","feature/hac-176-177-release-ready","feature/hac-178-tracked-demo-source"],"head":"0041bdf","uniqueCommits":["d5fe7a0","af4707b","0041bdf"],"linear":["HAC-136","HAC-176","HAC-177","HAC-178"],"disposition":"MANUAL_RECONCILIATION_REQUIRED"},
-    {"id":"br-already-integrated","names":["feature/hac-102-direct-api-reviewer","feature/hac-105-audit-judge-visible-workspacejson-compatibility-and","feature/hac-170-extension-installer-and-docs","feature/hac-175-first-run-onboarding","polish/output-channel-yaml","feature/hac-97-freeze-fixture-contract","worktree-readme-hero-polish"],"uniquePatch":"none by git cherry","disposition":"ALREADY_INTEGRATED"},
-    {"id":"br-legacy-preserve","names":["backup/hardened-17588dd","backup/pre-integration-main","dev","feature/hac-114-ci-audit-badge","feature/hac-136-decoration-plumbing","feature/hac-136-reauthored","feature/hac-136-vscode-decoration-spike","feature/hac-158-skills-reauthored","feature/release-npm-workflow","fix/hac-129-npx-entrypoint","hac-114-rebased","hac-158-rebased","integration/build-week-baseline","release/0.1.7","release/0.1.8","release/codex-mcp-0.1.5","main"],"disposition":"PRESERVE_PENDING_DECISION"}
+    {
+      "id": "br-release-019",
+      "name": "release/0.1.9",
+      "head": "940760d",
+      "ahead": 1,
+      "behind": 1,
+      "uniquePatch": "yes (negative cherry)",
+      "disposition": "PRESERVE_PENDING_DECISION"
+    },
+    {
+      "id": "br-marketplace",
+      "name": "polish/extension-marketplace-metadata",
+      "head": "b9ec0d9",
+      "ahead": 5,
+      "behind": 10,
+      "uniqueCommits": 10,
+      "linear": ["HAC-175", "HAC-197", "HAC-200", "HAC-203", "HAC-204", "HAC-206"],
+      "disposition": "REBASE_OR_REFRESH_CANDIDATE"
+    },
+    {
+      "id": "br-adversarial-fix",
+      "name": "fix/adversarial-review-hac99-hac101",
+      "head": "8dea6cc",
+      "ahead": 63,
+      "behind": 4,
+      "uniqueCommits": 4,
+      "linear": ["HAC-99", "HAC-101", "HAC-129", "HAC-130", "HAC-131"],
+      "disposition": "MANUAL_RECONCILIATION_REQUIRED"
+    },
+    {
+      "id": "br-hac136-family",
+      "names": [
+        "feature/hac-136-eligibility-reviewer",
+        "feature/hac-176-177-release-ready",
+        "feature/hac-178-tracked-demo-source"
+      ],
+      "head": "0041bdf",
+      "uniqueCommits": ["d5fe7a0", "af4707b", "0041bdf"],
+      "linear": ["HAC-136", "HAC-176", "HAC-177", "HAC-178"],
+      "disposition": "MANUAL_RECONCILIATION_REQUIRED"
+    },
+    {
+      "id": "br-already-integrated",
+      "names": [
+        "feature/hac-102-direct-api-reviewer",
+        "feature/hac-105-audit-judge-visible-workspacejson-compatibility-and",
+        "feature/hac-170-extension-installer-and-docs",
+        "feature/hac-175-first-run-onboarding",
+        "polish/output-channel-yaml",
+        "feature/hac-97-freeze-fixture-contract",
+        "worktree-readme-hero-polish"
+      ],
+      "uniquePatch": "none by git cherry",
+      "disposition": "ALREADY_INTEGRATED"
+    },
+    {
+      "id": "br-legacy-preserve",
+      "names": [
+        "backup/hardened-17588dd",
+        "backup/pre-integration-main",
+        "dev",
+        "feature/hac-114-ci-audit-badge",
+        "feature/hac-136-decoration-plumbing",
+        "feature/hac-136-reauthored",
+        "feature/hac-136-vscode-decoration-spike",
+        "feature/hac-158-skills-reauthored",
+        "feature/release-npm-workflow",
+        "fix/hac-129-npx-entrypoint",
+        "hac-114-rebased",
+        "hac-158-rebased",
+        "integration/build-week-baseline",
+        "release/0.1.7",
+        "release/0.1.8",
+        "release/codex-mcp-0.1.5",
+        "main"
+      ],
+      "disposition": "PRESERVE_PENDING_DECISION"
+    }
   ],
-  "allLocalBranchNames": ["backup/hardened-17588dd","backup/pre-integration-main","dev","feature/hac-102-direct-api-reviewer","feature/hac-105-audit-judge-visible-workspacejson-compatibility-and","feature/hac-114-ci-audit-badge","feature/hac-136-decoration-plumbing","feature/hac-136-eligibility-reviewer","feature/hac-136-reauthored","feature/hac-136-vscode-decoration-spike","feature/hac-158-skills-reauthored","feature/hac-170-extension-installer-and-docs","feature/hac-175-first-run-onboarding","feature/hac-176-177-release-ready","feature/hac-178-tracked-demo-source","feature/hac-97-freeze-fixture-contract","feature/release-npm-workflow","fix/adversarial-review-hac99-hac101","fix/hac-129-npx-entrypoint","hac-114-rebased","hac-158-rebased","integration/build-week-baseline","main","polish/extension-marketplace-metadata","polish/output-channel-yaml","release/0.1.7","release/0.1.8","release/0.1.9","release/codex-mcp-0.1.5","worktree-readme-hero-polish"],
-  "duplicates": [{"members":["feature/hac-136-eligibility-reviewer","feature/hac-176-177-release-ready","feature/hac-178-tracked-demo-source"],"head":"0041bdf"},{"members":["feature/hac-136-decoration-plumbing","fix/hac-129-npx-entrypoint"],"head":"f62ce3e"},{"members":["feature/hac-136-reauthored","feature/hac-158-skills-reauthored"],"head":"8824c9b"},{"members":["backup/hardened-17588dd","dev"],"head":"17588dd"}],
-  "linearMappings": [{"id":"HAC-136","linearState":"In Progress","implementationState":"IMPLEMENTED_UNVERIFIED","commentEvidence":"latest Linear correction requires product-path call, visible verdict, demo proof, and docs"},{"id":"HAC-206","linearState":"Backlog","implementationState":"ISSUE_DESCRIPTION_STALE","commentEvidence":"0.1.7 shipped-byte proof recorded; render/billfold gates pending"},{"id":"HAC-97","linearState":"Done","implementationState":"INTEGRATED"},{"id":"HAC-170","linearState":"Done","implementationState":"INTEGRATED"},{"id":"HAC-129","linearState":"Done","implementationState":"IMPLEMENTED_UNVERIFIED"}],
-  "dependencies": [{"from":"preserve-prunable-and-unreachable","to":"release-baseline-reconciliation"},{"from":"release-baseline-reconciliation","to":"manual-patch-family-review"},{"from":"manual-patch-family-review","to":"marketplace-refresh-pr"},{"from":"marketplace-refresh-pr","to":"validation-and-linear-update"},{"from":"validation-and-linear-update","to":"cleanup"}],
-  "proposedMergeOrder": ["preservation", "release range-diff", "manual security/fixture reconciliation", "fresh marketplace PR", "CI and packaged-artifact validation", "Linear updates", "cleanup"],
+  "allLocalBranchNames": [
+    "backup/hardened-17588dd",
+    "backup/pre-integration-main",
+    "dev",
+    "feature/hac-102-direct-api-reviewer",
+    "feature/hac-105-audit-judge-visible-workspacejson-compatibility-and",
+    "feature/hac-114-ci-audit-badge",
+    "feature/hac-136-decoration-plumbing",
+    "feature/hac-136-eligibility-reviewer",
+    "feature/hac-136-reauthored",
+    "feature/hac-136-vscode-decoration-spike",
+    "feature/hac-158-skills-reauthored",
+    "feature/hac-170-extension-installer-and-docs",
+    "feature/hac-175-first-run-onboarding",
+    "feature/hac-176-177-release-ready",
+    "feature/hac-178-tracked-demo-source",
+    "feature/hac-97-freeze-fixture-contract",
+    "feature/release-npm-workflow",
+    "fix/adversarial-review-hac99-hac101",
+    "fix/hac-129-npx-entrypoint",
+    "hac-114-rebased",
+    "hac-158-rebased",
+    "integration/build-week-baseline",
+    "main",
+    "polish/extension-marketplace-metadata",
+    "polish/output-channel-yaml",
+    "release/0.1.7",
+    "release/0.1.8",
+    "release/0.1.9",
+    "release/codex-mcp-0.1.5",
+    "worktree-readme-hero-polish"
+  ],
+  "duplicates": [
+    {
+      "members": [
+        "feature/hac-136-eligibility-reviewer",
+        "feature/hac-176-177-release-ready",
+        "feature/hac-178-tracked-demo-source"
+      ],
+      "head": "0041bdf"
+    },
+    { "members": ["feature/hac-136-decoration-plumbing", "fix/hac-129-npx-entrypoint"], "head": "f62ce3e" },
+    { "members": ["feature/hac-136-reauthored", "feature/hac-158-skills-reauthored"], "head": "8824c9b" },
+    { "members": ["backup/hardened-17588dd", "dev"], "head": "17588dd" }
+  ],
+  "linearMappings": [
+    {
+      "id": "HAC-136",
+      "linearState": "In Progress",
+      "implementationState": "IMPLEMENTED_UNVERIFIED",
+      "commentEvidence": "latest Linear correction requires product-path call, visible verdict, demo proof, and docs"
+    },
+    {
+      "id": "HAC-206",
+      "linearState": "Backlog",
+      "implementationState": "ISSUE_DESCRIPTION_STALE",
+      "commentEvidence": "0.1.7 shipped-byte proof recorded; render/billfold gates pending"
+    },
+    { "id": "HAC-97", "linearState": "Done", "implementationState": "INTEGRATED" },
+    { "id": "HAC-170", "linearState": "Done", "implementationState": "INTEGRATED" },
+    { "id": "HAC-129", "linearState": "Done", "implementationState": "IMPLEMENTED_UNVERIFIED" }
+  ],
+  "dependencies": [
+    { "from": "preserve-prunable-and-unreachable", "to": "release-baseline-reconciliation" },
+    { "from": "release-baseline-reconciliation", "to": "manual-patch-family-review" },
+    { "from": "manual-patch-family-review", "to": "marketplace-refresh-pr" },
+    { "from": "marketplace-refresh-pr", "to": "validation-and-linear-update" },
+    { "from": "validation-and-linear-update", "to": "cleanup" }
+  ],
+  "proposedMergeOrder": [
+    "preservation",
+    "release range-diff",
+    "manual security/fixture reconciliation",
+    "fresh marketplace PR",
+    "CI and packaged-artifact validation",
+    "Linear updates",
+    "cleanup"
+  ],
   "cleanupCandidates": [],
-  "humanApprovalGates": ["preservation bundle creation", "release equivalence decision", "architecture selection for HAC-136 family", "any merge/cherry-pick", "all cleanup"],
-  "unknowns": ["GitHub PR/check/protection state", "missing-worktree status and untracked files", "unreachable commit intent", "remote freshness"]
+  "humanApprovalGates": [
+    "preservation bundle creation",
+    "release equivalence decision",
+    "architecture selection for HAC-136 family",
+    "any merge/cherry-pick",
+    "all cleanup"
+  ],
+  "unknowns": [
+    "GitHub PR/check/protection state",
+    "missing-worktree status and untracked files",
+    "unreachable commit intent",
+    "remote freshness"
+  ]
 }
