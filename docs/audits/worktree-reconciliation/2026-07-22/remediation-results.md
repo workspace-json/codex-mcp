@@ -60,7 +60,7 @@ No Linear update is justified by this drift alone: the validated PR evidence con
 
 ## Pull Requests and Linear Updates
 
-- Pull requests: no implementation PR was created or updated. Historical PR #9 and PR #13 are verified merged; PR #1 is verified closed-unmerged. A documentation-only PR for this audit record may be opened after the preservation commit is pushed.
+- Pull requests: no implementation PR was created or updated. Historical PR #9 and PR #13 are verified merged; PR #1 is verified closed-unmerged. Documentation-only PR [#14](https://github.com/workspace-json/codex-mcp/pull/14) was opened from `audit/reconciliation-2026-07-22` to `main` for this audit record.
 - Linear: none created, edited, commented on, closed, reopened, or canceled. HAC-136 and HAC-206 were read only.
 
 ## Cleanup
@@ -75,7 +75,7 @@ None. No worktree, branch, stash, untracked file, commit, or remote ref was remo
 - Remaining branches with unique/unverified work: unchanged from the audit, including the `0041bdf` family, `fix/adversarial-review-hac99-hac101`, `polish/extension-marketplace-metadata`, and `release/0.1.9`.
 - Remaining stashes: none observed in root worktree.
 - Remaining uncommitted implementation: none introduced by this execution; audit documentation will be committed on the dedicated audit branch.
-- Open reconciliation pull requests: none observed at the post-authentication re-check; the documentation-only audit PR is pending creation.
+- Open reconciliation pull requests: documentation-only PR #14; no implementation reconciliation PR is open.
 - Linear issues still requiring correction: HAC-136 and HAC-206; no updates are justified without verified integration.
 - Validation status: audit-file integrity PASS; repository-wide integration validation NOT RUN because no integration was performed.
 - Cleanup status: blocked; no cleanup is safe.
