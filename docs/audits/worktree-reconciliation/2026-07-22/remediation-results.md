@@ -66,20 +66,28 @@ No Linear update is justified by this drift alone: the validated PR evidence con
 
 ## Cleanup
 
-None. No worktree, branch, stash, untracked file, commit, or remote ref was removed or rewritten.
+### Executed cleanup: HAC-170 integrated worktree
+
+- Audit surface: `wt-hac170` / `feature/hac-170-extension-installer-and-docs@82d25a7`.
+- Evidence: the worktree was clean; `git cherry -v origin/main feature/hac-170-extension-installer-and-docs` had no unique patch output; its implementation had already landed on `main` through the HAC-170 delivery sequence. No automation referenced the path; the only retained references are historical inventory text in this audit.
+- Action: `git worktree remove /Users/user1/Documents/workspacejson-codex-mcp/.claude/worktrees/readme-hero-polish`, followed by `git branch -d feature/hac-170-extension-installer-and-docs`.
+- Result: both commands succeeded with normal non-force deletion. The worktree is absent from `git worktree list`; the branch no longer resolves.
+- Backup/rollback: none required because no unique commits or working-tree changes existed; recovery remains possible from integrated `main` history.
+
+No other worktree, branch, stash, untracked file, commit, or remote ref was removed or rewritten.
 
 ## Final Repository State
 
 - Canonical integration reference: `origin/main@7d42a61` (cached local tracking ref; remote freshness unavailable).
 - Current branch: `audit/reconciliation-2026-07-22`, created from `release/0.1.9@940760d`.
-- Remaining worktrees: 15 registered; 12 prunable/missing.
+- Remaining worktrees: 14 registered; 12 prunable/missing.
 - Remaining branches with unique/unverified work: unchanged from the audit, including the `0041bdf` family, `fix/adversarial-review-hac99-hac101`, `polish/extension-marketplace-metadata`, and `release/0.1.9`.
 - Remaining stashes: none observed in root worktree.
 - Remaining uncommitted implementation: none introduced by this execution; audit documentation will be committed on the dedicated audit branch.
 - Open reconciliation pull requests: documentation-only PR #14; no implementation reconciliation PR is open.
 - Linear issues still requiring correction: HAC-136 and HAC-206; no updates are justified without verified integration.
 - Validation status: audit-file integrity PASS; repository-wide integration validation NOT RUN because no integration was performed.
-- Cleanup status: blocked; no cleanup is safe.
+- Cleanup status: one integrated HAC-170 worktree/branch removed; all remaining cleanup is blocked pending preservation and architecture decisions.
 
 ## Unresolved Items
 
@@ -93,5 +101,5 @@ None. No worktree, branch, stash, untracked file, commit, or remote ref was remo
 - All approved unique work was preserved: **PARTIAL** — the audit artifacts are preserved on the dedicated audit branch; unreachable/missing-worktree work was not yet bundled because the audit requires an explicit per-object preservation review.
 - All successful integrations were validated: **NOT APPLICABLE** — no integrations were performed.
 - Linear was updated only after repository verification: **YES** — Linear was not modified.
-- Every removed worktree and branch was proven redundant or intentionally archived: **YES** — none were removed.
+- Every removed worktree and branch was proven redundant or intentionally archived: **YES** — the only removal was the clean, patch-equivalent HAC-170 worktree/branch described above.
 - Any item remains whose safety is unknown: **YES** — 12 prunable/missing worktrees, unreachable commits, GitHub PR/check/protection state, and architecture decisions remain unresolved.
