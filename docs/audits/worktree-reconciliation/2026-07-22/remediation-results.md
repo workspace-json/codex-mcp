@@ -55,6 +55,7 @@ No Linear update is justified by this drift alone: the validated PR evidence con
 | --- | --- | --- |
 | Audit JSON | `node -e JSON.parse(...)` with branch/worktree counts | PASS: valid JSON; 30 branches and 15 worktrees enumerated |
 | Audit formatting | `git diff --check -- docs/audits/worktree-reconciliation/2026-07-22` | PASS |
+| Audit PR CI | GitHub Actions run `29957217674` for PR #14 at `f8e201a` | PASS: Node 20 and Node 22 `build-and-smoke` both completed successfully |
 | Runtime/package validation | Not run | Not applicable: no runtime/package change; full integration validation remains blocked |
 | Adversarial review | `codex exec review --uncommitted --ephemeral` | INCOMPLETE: reviewer inspected the artifacts but did not emit a final verdict; Linear OAuth refresh failed. A count discrepancy discovered during review was corrected before this log. |
 
