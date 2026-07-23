@@ -86,18 +86,29 @@ No other worktree, branch, stash, untracked file, commit, or remote ref was remo
   - Backup/rollback: not required for the local branch; the matching merged commit remains reachable from `main` and the remote branch remains available.
 - **Retained after re-check:** `polish/extension-marketplace-metadata`, `feature/release-npm-workflow`, `hac-114-rebased`, `hac-158-rebased`, and `integration/build-week-baseline`. Each still has one or more `git cherry -v main <branch>` entries marked `+`; prior PR association is insufficient proof of patch equivalence. They remain `PRESERVE_PENDING_DECISION`.
 
+### 2026-07-23 — merged-payload and duplicate cleanup
+
+- **SAFE_DRIFT:** PR [#16](https://github.com/workspace-json/codex-mcp/pull/16) merged at `7882883` with both Node 20 and Node 22 `build-and-smoke` checks passing. Local `main` was fast-forwarded. The local `audit/reconciliation-cleanup-phase2-2026-07-22@39b0d10` branch was removed only after its patch ID matched the squash-merged commit (`9e1b866f0c52d0433cb3e2b14ed9f91b82dfde00`).
+- **Executed local merged-payload cleanup:** `polish/extension-marketplace-metadata`, `feature/release-npm-workflow`, `integration/build-week-baseline`, `hac-114-rebased`, `hac-158-rebased`, `release/0.1.7`, `release/0.1.8`, and `release/codex-mcp-0.1.5`.
+  - Evidence: for each branch, `git diff $(git merge-base main <branch>) <branch> | git patch-id --stable` exactly matched the recorded merged PR diff: respectively PRs #9 (`40b73cb`), #6 (`2b08a5b`), #3 (`cd3f0d8`), #4 (`20995b7`), #5 (`8539c64`), #11 (`7b1f487`), #12 (`1261728`), and #7 (`4288232`). No target was checked out in a registered worktree.
+  - Action/result: created documentation-only branch `audit/reconciliation-cleanup-wave3-2026-07-23`, then removed each local branch with `git branch -D`; all were squash-merge ancestry cases. Remote refs were not removed.
+- **Executed duplicate-family cleanup:** `dev@17588dd`, `feature/hac-176-177-release-ready@0041bdf`, and `feature/hac-178-tracked-demo-source@0041bdf`.
+  - Evidence: `dev` and retained `backup/hardened-17588dd` have the same tree (`d8968e221ec56cef41b390ec2529042bdd8ea610`). The three HAC-136/HAC-176/HAC-178 branch tips had the same tree (`085393791616da1a8807945074489754f8a0dec5`); `feature/hac-136-eligibility-reviewer` remains preserved. The HAC-178 worktree path did not exist, so it could contain no staged, modified, or untracked files.
+  - Action/result: removed the two duplicate local refs. Removed the absent HAC-178 registration with `git worktree remove --force /private/tmp/workspacejson-hac178`, then deleted its duplicate branch. Worktree registrations decreased from 14 to 13. No existing filesystem worktree was removed.
+- **Retained despite the review's semantic-supersession finding:** `backup/hardened-17588dd`, `feature/hac-114-ci-audit-badge`, `feature/hac-136-eligibility-reviewer`, and `audit/reconciliation-2026-07-22`. Their changed file blobs differ from the later merged snapshots or their aggregate patch differs from the cited PR. They remain preservation references pending separate content-level reconciliation. `fix/adversarial-review-hac99-hac101` remains preserved as the unmerged structured-content/corrupt-workspace hardening candidate.
+
 ## Final Repository State
 
-- Canonical integration reference: `origin/main@7d42a61` (cached local tracking ref; remote freshness unavailable).
-- Current branch: `audit/reconciliation-2026-07-22`, created from `release/0.1.9@940760d`.
-- Remaining worktrees: 14 registered; 12 prunable/missing.
-- Remaining branches with unique/unverified work: unchanged from the audit, including the `0041bdf` family, `fix/adversarial-review-hac99-hac101`, `polish/extension-marketplace-metadata`, and `release/0.1.9`.
+- Canonical integration reference: `origin/main@7882883` (PR #16 merged; current remote tracking ref).
+- Current branch: `audit/reconciliation-cleanup-wave3-2026-07-23`, created from `main@7882883` to record this documentation-only cleanup wave.
+- Remaining worktrees: 13 registered; 11 prunable/missing and one detached scratch worktree.
+- Remaining branches with unique/unverified work: `fix/adversarial-review-hac99-hac101`, retained representatives `backup/hardened-17588dd`, `feature/hac-114-ci-audit-badge`, and `feature/hac-136-eligibility-reviewer`, plus all branches not inspected in this cleanup wave.
 - Remaining stashes: none observed in root worktree.
 - Remaining uncommitted implementation: none introduced by this execution; audit documentation will be committed on the dedicated audit branch.
-- Open reconciliation pull requests: documentation-only PR #14; no implementation reconciliation PR is open.
+- Open reconciliation pull requests: PRs #14, #15, and #16 are merged; this documentation-only cleanup record has not yet been published. No implementation reconciliation PR is open.
 - Linear issues still requiring correction: HAC-136 and HAC-206; no updates are justified without verified integration.
 - Validation status: audit-file integrity PASS; repository-wide integration validation NOT RUN because no integration was performed.
-- Cleanup status: one integrated HAC-170 worktree/branch removed; all remaining cleanup is blocked pending preservation and architecture decisions.
+- Cleanup status: one integrated HAC-170 worktree/branch, eleven redundant local branches, and one absent duplicate worktree registration removed. No remote ref, stash, reachable unique commit, or existing filesystem worktree was removed.
 
 ## Unresolved Items
 
@@ -111,5 +122,5 @@ No other worktree, branch, stash, untracked file, commit, or remote ref was remo
 - All approved unique work was preserved: **PARTIAL** — the audit artifacts are preserved on the dedicated audit branch; unreachable/missing-worktree work was not yet bundled because the audit requires an explicit per-object preservation review.
 - All successful integrations were validated: **NOT APPLICABLE** — no integrations were performed.
 - Linear was updated only after repository verification: **YES** — Linear was not modified.
-- Every removed worktree and branch was proven redundant or intentionally archived: **YES** — the only removal was the clean, patch-equivalent HAC-170 worktree/branch described above.
-- Any item remains whose safety is unknown: **YES** — 12 prunable/missing worktrees, unreachable commits, GitHub PR/check/protection state, and architecture decisions remain unresolved.
+- Every removed worktree and branch was proven redundant or intentionally archived: **YES** — each removal is documented above with an exact merged-payload match or a retained identical-tree representative.
+- Any item remains whose safety is unknown: **YES** — 11 prunable/missing worktrees, unreachable commits, and architecture decisions remain unresolved.
