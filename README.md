@@ -20,6 +20,36 @@
   <img alt="Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue">
 </p>
 
+---
+
+## Hackathon submission snapshot
+
+The OpenAI Build Week submission was finalized on **July 21, 2026** (5:00 PM Pacific deadline).
+
+For judging, the submitted project state is preserved at:
+
+- **Git tag:** `codex-mcp-v0.1.9` (also available as `build-week-2026-submission`)
+- **Commit:** `7d42a61af78a383219c536cc49220f154a93a2bf`
+
+Commits made after the submission deadline are limited to **repository maintenance, audit documentation, and branch/worktree reconciliation**. They are not part of the work submitted for judging.
+
+| Commit | Date | Description |
+| --- | --- | --- |
+| `6eeb49f` | Jul 22 | `docs(audit): record worktree reconciliation (#14)` |
+| `7ca4c19` | Jul 22 | `docs(audit): record HAC-170 cleanup (#15)` |
+| `7882883` | Jul 23 | `docs(audit): record duplicate branch cleanup (#16)` |
+| `e188225` | Jul 23 | `docs(audit): record cleanup wave three (#17)` |
+
+Each of these commits touches only files under `docs/audits/` — no source code, tests, dependencies, or packaging were modified after the deadline.
+
+Installation and testing instructions for the submitted version remain available below. To check out the exact submitted state:
+
+```bash
+git checkout codex-mcp-v0.1.9
+```
+
+---
+
 ## See it in 30 seconds
 
 | | |
