@@ -76,6 +76,16 @@ No Linear update is justified by this drift alone: the validated PR evidence con
 
 No other worktree, branch, stash, untracked file, commit, or remote ref was removed or rewritten.
 
+### Continued cleanup after merged audit PRs
+
+- **SAFE_DRIFT:** PR [#15](https://github.com/workspace-json/codex-mcp/pull/15), the HAC-170 cleanup record, merged at `7ca4c19` with Node 20 and Node 22 `build-and-smoke` checks passing. Local `main` was fast-forwarded to that commit. The local `audit/reconciliation-cleanup-2026-07-22@48ea6f2` branch was then removed with `git branch -D` only after its patch ID was proven identical to the merged commit (`dad57dbc00e549aa81ea795c5289c4f9c2a6e0fc`); squash merge made normal ancestry deletion unavailable.
+- **Executed local duplicate-branch cleanup:** `polish/output-channel-yaml@c10ac8c`.
+  - Evidence: PR [#8](https://github.com/workspace-json/codex-mcp/pull/8) is `MERGED` at `c14ef4e` and both `build-and-smoke` checks passed. `git worktree list --porcelain` showed no worktree using the branch. `git cherry -v main polish/output-channel-yaml` reported its only commit as `-`, establishing exact patch identity with `main`.
+  - Action: created documentation-only branch `audit/reconciliation-cleanup-phase2-2026-07-22` from `main`, then ran `git branch -D polish/output-channel-yaml`.
+  - Result: the local branch is absent; the remote `origin/polish/output-channel-yaml` was intentionally retained because no remote-ref deletion was approved in this wave.
+  - Backup/rollback: not required for the local branch; the matching merged commit remains reachable from `main` and the remote branch remains available.
+- **Retained after re-check:** `polish/extension-marketplace-metadata`, `feature/release-npm-workflow`, `hac-114-rebased`, `hac-158-rebased`, and `integration/build-week-baseline`. Each still has one or more `git cherry -v main <branch>` entries marked `+`; prior PR association is insufficient proof of patch equivalence. They remain `PRESERVE_PENDING_DECISION`.
+
 ## Final Repository State
 
 - Canonical integration reference: `origin/main@7d42a61` (cached local tracking ref; remote freshness unavailable).
